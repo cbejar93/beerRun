@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { RUNNERS } from '../data/constants';
+import { mergeRsvps } from '../data/mergeRsvps';
 
 const AVATAR_HUES = ['#B8701C', '#8A4F12', '#C8F03C', '#1F1410', '#E89944', '#6B5A45'];
 
@@ -13,16 +13,10 @@ function initials(name) {
   return name.split(' ').map(p => p[0]).slice(0, 2).join('');
 }
 
-export default function Runners({ liveRsvp }) {
+export default function Runners({ apiRsvps = [] }) {
   const [filter, setFilter] = useState('all');
 
-  const allRunners = useMemo(() => {
-    if (!liveRsvp) return RUNNERS;
-    return [
-      { name: liveRsvp.name, pace: 'Rookie', status: liveRsvp.status, note: liveRsvp.beer || 'Freshly RSVPed' },
-      ...RUNNERS,
-    ];
-  }, [liveRsvp]);
+  const allRunners = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
 
   const shown = allRunners.filter(r => filter === 'all' || r.status === filter);
   const counts = {

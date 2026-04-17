@@ -7,16 +7,23 @@ import RouteMap from '../components/RouteMap';
 import Runners from '../components/Runners';
 import HostView from '../components/HostView';
 import TweaksPanel from '../components/TweaksPanel';
+import { useRsvps } from '../hooks/useRsvps';
 
 export default function BeerRunApp() {
   const [role, setRole] = useState('guest');
   const [theme, setThemeState] = useState('amber');
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [liveRsvp, setLiveRsvp] = useState(null);
+  const { apiRsvps, addRsvp } = useRsvps();
 
   const setTheme = (t) => {
     setThemeState(t);
     document.documentElement.setAttribute('data-theme', t);
+  };
+
+  const handleRsvp = (entry) => {
+    setLiveRsvp(entry);
+    addRsvp(entry);
   };
 
   useEffect(() => {
@@ -37,12 +44,12 @@ export default function BeerRunApp() {
         <>
           <Hero />
           <Ticker />
-          <RSVP onRsvp={setLiveRsvp} rsvpStatus={liveRsvp?.status} />
+          <RSVP onRsvp={handleRsvp} rsvpStatus={liveRsvp?.status} apiRsvps={apiRsvps} />
           <RouteMap />
-          <Runners liveRsvp={liveRsvp} />
+          <Runners apiRsvps={apiRsvps} />
         </>
       ) : (
-        <HostView liveRsvp={liveRsvp} />
+        <HostView apiRsvps={apiRsvps} />
       )}
       <footer className="foot">
         <span>© 2026 BEER RUN SOCIETY · OAKLAND CA</span>
