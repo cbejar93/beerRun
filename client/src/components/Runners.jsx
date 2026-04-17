@@ -1,0 +1,84 @@
+import { useState, useMemo } from 'react';
+import { RUNNERS } from '../data/constants';
+
+const AVATAR_HUES = ['#B8701C', '#8A4F12', '#C8F03C', '#1F1410', '#E89944', '#6B5A45'];
+
+function hueFor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % AVATAR_HUES.length;
+  return AVATAR_HUES[h];
+}
+
+function initials(name) {
+  return name.split(' ').map(p => p[0]).slice(0, 2).join('');
+}
+
+export default function Runners({ liveRsvp }) {
+  const [filter, setFilter] = useState('all');
+
+  const allRunners = useMemo(() => {
+    if (!liveRsvp) return RUNNERS;
+    return [
+      { name: liveRsvp.name, pace: 'Rookie', status: liveRsvp.status, note: liveRsvp.beer || 'Freshly RSVPed' },
+      ...RUNNERS,
+    ];
+  }, [liveRsvp]);
+
+  const shown = allRunners.filter(r => filter === 'all' || r.status === filter);
+  const counts = {
+    all: allRunners.length,
+    going: allRunners.filter(r => r.status === 'going').length,
+    maybe: allRunners.filter(r => r.status === 'maybe').length,
+    out: allRunners.filter(r => r.status === 'out').length,
+  };
+
+  return (
+    <section className="section" id="runners">
+      <div className="sec-head">
+        <div>
+          <div className="sec-num">04 / THE FIELD</div>
+          <h2 className="sec-title">
+            {counts.going} confirmed.<br />
+            {counts.maybe} wobbly.
+          </h2>
+        </div>
+        <p className="sec-desc">
+          Start trash-talking early. Paces self-reported — believe them
+          at your own peril.
+        </p>
+      </div>
+      <div className="runners-head">
+        {[
+          { k: 'all', l: 'Everyone' },
+          { k: 'going', l: 'Going' },
+          { k: 'maybe', l: 'Maybe' },
+          { k: 'out', l: 'Out' },
+        ].map(f => (
+          <button
+            key={f.k}
+            className={`filter-chip ${filter === f.k ? 'active' : ''}`}
+            onClick={() => setFilter(f.k)}
+          >
+            {f.l} <span style={{ opacity: 0.6, marginLeft: 4 }}>{counts[f.k]}</span>
+          </button>
+        ))}
+      </div>
+      <div className="runners-grid">
+        {shown.map((r, i) => (
+          <div key={i} className={`runner ${r.status}`}>
+            <div className="avatar" style={{ background: hueFor(r.name) }}>
+              {initials(r.name)}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="runner-name">{r.name}</div>
+              <div className="runner-meta">{r.pace} · {r.note}</div>
+              <span className="runner-status-pill">
+                {r.status === 'going' ? 'IN' : r.status === 'maybe' ? 'MAYBE' : 'OUT'}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
