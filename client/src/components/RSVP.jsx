@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { RUNNERS } from '../data/constants';
+import { useState, useMemo } from 'react';
+import { mergeRsvps } from '../data/mergeRsvps';
 
 const FINE_PRINT = [
   'Run is self-timed. Honor system. We have a spreadsheet.',
@@ -9,7 +9,7 @@ const FINE_PRINT = [
   'Rain delays to Sunday. Hurricane cancels.',
 ];
 
-export default function RSVP({ onRsvp, rsvpStatus }) {
+export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
   const [name, setName] = useState('');
   const [beer, setBeer] = useState('');
   const [status, setStatus] = useState(rsvpStatus || null);
@@ -67,8 +67,9 @@ export default function RSVP({ onRsvp, rsvpStatus }) {
     );
   }
 
-  const going = RUNNERS.filter(r => r.status === 'going').length;
-  const maybe = RUNNERS.filter(r => r.status === 'maybe').length;
+  const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
+  const going = combined.filter(r => r.status === 'going').length;
+  const maybe = combined.filter(r => r.status === 'maybe').length;
 
   return (
     <section className="section" id="rsvp">

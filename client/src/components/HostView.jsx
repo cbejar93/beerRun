@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { RUNNERS } from '../data/constants';
+import { useState, useMemo } from 'react';
+import { mergeRsvps } from '../data/mergeRsvps';
 import Runners from './Runners';
 
 const TASKS = [
@@ -10,11 +10,12 @@ const TASKS = [
   { t: 'Book post-run taco truck', due: 'Due May 10', done: false },
 ];
 
-export default function HostView({ liveRsvp }) {
+export default function HostView({ apiRsvps = [] }) {
   const [tasks, setTasks] = useState(TASKS);
 
-  const going = RUNNERS.filter(r => r.status === 'going').length + (liveRsvp?.status === 'going' ? 1 : 0);
-  const maybe = RUNNERS.filter(r => r.status === 'maybe').length + (liveRsvp?.status === 'maybe' ? 1 : 0);
+  const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
+  const going = combined.filter(r => r.status === 'going').length;
+  const maybe = combined.filter(r => r.status === 'maybe').length;
 
   const toggleTask = (i) => {
     setTasks(prev => prev.map((t, idx) => idx === i ? { ...t, done: !t.done } : t));
@@ -98,7 +99,7 @@ export default function HostView({ liveRsvp }) {
           </div>
         </div>
       </section>
-      <Runners liveRsvp={liveRsvp} />
+      <Runners apiRsvps={apiRsvps} />
     </>
   );
 }
