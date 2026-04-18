@@ -10,8 +10,32 @@ const TASKS = [
   { t: 'Book post-run taco truck', due: 'Due May 10', done: false },
 ];
 
-export default function HostView({ apiRsvps = [] }) {
+export default function HostView({ apiRsvps = [], onImport }) {
   const [tasks, setTasks] = useState(TASKS);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFile = async (file) => {
+    if (!file || !file.name.endsWith('.csv')) {
+      setImportResult({ error: 'Please upload a .csv file' });
+      return;
+    }
+    setImporting(true);
+    setImportResult(null);
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await fetch('/api/rsvp/import', { method: 'POST', body: form });
+      const data = await res.json();
+      setImportResult(data);
+      if (data.imported > 0) onImport?.();
+    } catch {
+      setImportResult({ error: 'Upload failed' });
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
   const going = combined.filter(r => r.status === 'going').length;
@@ -96,6 +120,52 @@ export default function HostView({ apiRsvps = [] }) {
             }}>
               Send to {going} runners →
             </button>
+          </div>
+        </div>
+        {/* Partiful CSV import */}
+        <div style={{ marginTop: 24 }}>
+          <div className="kpi" style={{ padding: 24 }}>
+            <div className="label">IMPORT FROM PARTIFUL</div>
+            <p style={{ margin: '8px 0 16px', fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Export your guest list from Partiful (event page → Guest List → Export CSV) and drop it here.
+              Duplicate names are skipped automatically.
+            </p>
+            <div
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
+              onClick={() => document.getElementById('csv-input').click()}
+              style={{
+                border: `2px dashed ${dragOver ? 'var(--punch)' : 'var(--rule)'}`,
+                borderRadius: 12, padding: '28px 20px', textAlign: 'center',
+                cursor: 'pointer', transition: 'border-color 0.15s',
+                background: dragOver ? 'color-mix(in oklab, var(--punch), transparent 90%)' : 'var(--paper)',
+              }}
+            >
+              <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 22, textTransform: 'uppercase', marginBottom: 6 }}>
+                {importing ? 'Importing…' : 'Drop CSV or click to browse'}
+              </div>
+              <div className="mono" style={{ fontSize: 10, opacity: 0.5, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Accepts Partiful guest-list CSV · max 2 MB
+              </div>
+              <input
+                id="csv-input" type="file" accept=".csv"
+                style={{ display: 'none' }}
+                onChange={e => handleFile(e.target.files[0])}
+              />
+            </div>
+            {importResult && (
+              <div style={{
+                marginTop: 12, padding: '12px 16px', borderRadius: 10,
+                background: importResult.error ? 'color-mix(in oklab, var(--warn), transparent 85%)' : 'color-mix(in oklab, var(--punch), transparent 80%)',
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 12,
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>
+                {importResult.error
+                  ? `⚠ ${importResult.error}`
+                  : `✓ ${importResult.imported} imported · ${importResult.skipped} skipped · ${importResult.total} total in file`}
+              </div>
+            )}
           </div>
         </div>
       </section>

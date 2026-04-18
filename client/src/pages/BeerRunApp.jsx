@@ -14,7 +14,7 @@ export default function BeerRunApp() {
   const [theme, setThemeState] = useState('amber');
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [liveRsvp, setLiveRsvp] = useState(null);
-  const { apiRsvps, addRsvp } = useRsvps();
+  const { apiRsvps, addRsvp, refresh } = useRsvps();
 
   const setTheme = (t) => {
     setThemeState(t);
@@ -49,7 +49,7 @@ export default function BeerRunApp() {
           <Runners apiRsvps={apiRsvps} />
         </>
       ) : (
-        <HostView apiRsvps={apiRsvps} />
+        <HostView apiRsvps={apiRsvps} onImport={refresh} />
       )}
       <footer className="foot">
         <span>© 2026 BEER RUN SOCIETY · OAKLAND CA</span>
