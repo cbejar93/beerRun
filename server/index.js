@@ -4,6 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
+import jwt from 'jsonwebtoken';
 import Rsvp from './models/Rsvp.js';
 
 const app = express();
@@ -20,6 +21,25 @@ function normalizeStatus(raw = '') {
 
 app.use(cors());
 app.use(express.json());
+
+app.post('/api/auth/host', (req, res) => {
+  if (!process.env.HOST_PIN || req.body.pin !== process.env.HOST_PIN) {
+    return res.status(401).json({ error: 'wrong pin' });
+  }
+  const token = jwt.sign({ host: true }, process.env.JWT_SECRET, { expiresIn: '12h' });
+  res.json({ token });
+});
+
+function requireHost(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'unauthorized' });
+  try {
+    jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'invalid token' });
+  }
+}
 
 app.post('/api/rsvp', async (req, res) => {
   const { name, beer, status } = req.body;
@@ -51,7 +71,7 @@ app.get('/api/rsvp', async (_req, res) => {
 });
 
 // POST /api/rsvp/import — accepts a Partiful (or generic) CSV upload
-app.post('/api/rsvp/import', upload.single('file'), async (req, res) => {
+app.post('/api/rsvp/import', requireHost, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'no file uploaded' });
   try {
     const rows = parse(req.file.buffer, { columns: true, skip_empty_lines: true, trim: true });
@@ -85,7 +105,7 @@ app.post('/api/rsvp/import', upload.single('file'), async (req, res) => {
   }
 });
 
-app.delete('/api/rsvp/:id', async (req, res) => {
+app.delete('/api/rsvp/:id', requireHost, async (req, res) => {
   try {
     const deleted = await Rsvp.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'not found' });
