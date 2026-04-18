@@ -10,7 +10,7 @@ const TASKS = [
   { t: 'Book post-run taco truck', due: 'Due May 10', done: false },
 ];
 
-export default function HostView({ apiRsvps = [], onImport }) {
+export default function HostView({ apiRsvps = [], onImport, authFetch = fetch }) {
   const [tasks, setTasks] = useState(TASKS);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -26,7 +26,7 @@ export default function HostView({ apiRsvps = [], onImport }) {
     const form = new FormData();
     form.append('file', file);
     try {
-      const res = await fetch('/api/rsvp/import', { method: 'POST', body: form });
+      const res = await authFetch('/api/rsvp/import', { method: 'POST', body: form });
       const data = await res.json();
       setImportResult(data);
       if (data.imported > 0) onImport?.();
