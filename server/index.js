@@ -7,6 +7,8 @@ import { parse } from 'csv-parse/sync';
 import jwt from 'jsonwebtoken';
 import morgan from 'morgan';
 import { rateLimit } from 'express-rate-limit';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import Rsvp from './models/Rsvp.js';
 import Task from './models/Task.js';
 
@@ -38,6 +40,11 @@ function normalizeStatus(raw = '') {
 app.use(cors());
 app.use(express.json());
 app.use(morgan('[:date[iso]] :method :url :status :res[content-length]b - :response-time ms'));
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+const clientDist = path.join(__dirname, '..', 'client', 'dist');
+app.use(express.static(clientDist));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -207,6 +214,10 @@ app.delete('/api/tasks/:id', requireHost, async (req, res) => {
     log.error('DELETE /api/tasks/:id:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(clientDist, 'index.html'));
 });
 
 mongoose
