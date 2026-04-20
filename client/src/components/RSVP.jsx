@@ -66,10 +66,6 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
               {beer ? <> · bringing <strong style={{ color: 'var(--ink)' }}>{beer}</strong></> : null}.
               Check email for your bib number and the group chat invite.
             </p>
-            <button className="rsvp-confirm" onClick={() => setConfirmed(false)}>
-              Change my answer
-              <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>↻</span>
-            </button>
           </div>
           <div className="rsvp-side">
             <div className="sec-num">THE FINE PRINT</div>

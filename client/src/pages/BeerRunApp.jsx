@@ -45,9 +45,6 @@ export default function BeerRunApp() {
   };
 
   const handleSetRole = (r) => {
-    if (r === 'guest' && role === 'host') {
-      logout();
-    }
     setRole(r);
   };
 

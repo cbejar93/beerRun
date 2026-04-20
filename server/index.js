@@ -6,6 +6,7 @@ import multer from 'multer';
 import { parse } from 'csv-parse/sync';
 import jwt from 'jsonwebtoken';
 import morgan from 'morgan';
+import { rateLimit } from 'express-rate-limit';
 import Rsvp from './models/Rsvp.js';
 import Task from './models/Task.js';
 
@@ -38,7 +39,23 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('[:date[iso]] :method :url :status :res[content-length]b - :response-time ms'));
 
-app.post('/api/auth/host', (req, res) => {
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts, try again later' },
+});
+
+const rsvpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many RSVPs from this IP' },
+});
+
+app.post('/api/auth/host', authLimiter, (req, res) => {
   if (!process.env.HOST_PIN || req.body.pin !== process.env.HOST_PIN) {
     log.warn('Failed host auth attempt');
     return res.status(401).json({ error: 'wrong pin' });
@@ -63,7 +80,7 @@ function requireHost(req, res, next) {
   }
 }
 
-app.post('/api/rsvp', async (req, res) => {
+app.post('/api/rsvp', rsvpLimiter, async (req, res) => {
   const { name, beer, status } = req.body;
   if (!name || !status || !['going', 'maybe', 'out'].includes(status)) {
     return res.status(400).json({ error: 'name and valid status required' });
