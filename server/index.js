@@ -23,10 +23,20 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 
+const c = {
+  reset:  '\x1b[0m',
+  dim:    '\x1b[2m',
+  green:  '\x1b[32m',
+  yellow: '\x1b[33m',
+  red:    '\x1b[31m',
+  cyan:   '\x1b[36m',
+};
+
+const ts = () => `${c.dim}[${new Date().toISOString()}]${c.reset}`;
 const log = {
-  info:  (...a) => console.log(`[${new Date().toISOString()}] INFO `, ...a),
-  warn:  (...a) => console.warn(`[${new Date().toISOString()}] WARN `, ...a),
-  error: (...a) => console.error(`[${new Date().toISOString()}] ERROR`, ...a),
+  info:  (...a) => console.log( `${ts()} ${c.green}INFO ${c.reset}`, ...a),
+  warn:  (...a) => console.warn(`${ts()} ${c.yellow}WARN ${c.reset}`, ...a),
+  error: (...a) => console.error(`${ts()} ${c.red}ERROR${c.reset}`, ...a),
 };
 
 // Map Partiful (and generic) status strings to our schema values
