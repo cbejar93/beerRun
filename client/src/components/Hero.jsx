@@ -26,7 +26,7 @@ export default function Hero() {
             </div>
             <div>
               <span className="label">Where</span>
-              <span className="val">Lakeside Bandstand, Oakland</span>
+              <span className="val">Snow Park, Oakland</span>
             </div>
             <div>
               <span className="label">Dress code</span>
