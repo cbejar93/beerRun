@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.*
+**/.env
+**/.env.*
+node_modules
+**/node_modules
+client/src
+client/public
+client/index.html
+client/vite.config.js
+.fly
+*.md
+.DS_Store
