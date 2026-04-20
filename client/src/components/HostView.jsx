@@ -189,7 +189,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
           ))}
         </div>
 
-        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16 }}>
+        <div className="host-panel-grid">
           <div className="kpi" style={{ padding: 24 }}>
             <div className="label">NEXT ACTIONS</div>
             <ul style={{ margin: '10px 0 0 0', padding: 0, listStyle: 'none' }}>
@@ -222,7 +222,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
                 </li>
               ))}
             </ul>
-            <form onSubmit={addTask} style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <form onSubmit={addTask} className="task-add-form">
               <input
                 value={newTask} onChange={e => setNewTask(e.target.value)}
                 placeholder="New task…"
@@ -277,7 +277,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
           </div>
         </div>
         {/* Add runner + CSV import */}
-        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="host-panel-grid host-panel-grid--half">
           <AddRunner onAdd={onImport} authFetch={authFetch} />
           <div className="kpi" style={{ padding: 24 }}>
             <div className="label">IMPORT FROM PARTIFUL</div>

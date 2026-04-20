@@ -725,6 +725,20 @@ body { overflow-x: hidden; }
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
+.host-panel-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 16px;
+}
+.host-panel-grid--half {
+  grid-template-columns: 1fr 1fr;
+}
+.task-add-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
 .kpi {
   border: 2px solid var(--rule);
   border-radius: 14px;
@@ -822,6 +836,9 @@ body { overflow-x: hidden; }
   .hero-right .countdown-card { order: -1; }
   .rsvp, .route-wrap { grid-template-columns: 1fr; }
   .host-grid { grid-template-columns: repeat(2, 1fr); }
+  .host-panel-grid,
+  .host-panel-grid--half { grid-template-columns: 1fr; }
+  .task-add-form { flex-wrap: wrap; }
   .nav-inner { flex-wrap: wrap; padding: 12px 16px; gap: 12px; }
   .section { padding: 48px 20px; }
   .hero-grid { padding: 24px 20px 40px; }
