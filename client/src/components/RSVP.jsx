@@ -3,7 +3,7 @@ import { mergeRsvps } from '../data/mergeRsvps';
 
 const FINE_PRINT = [
   'Run is self-timed. Honor system. We have a spreadsheet.',
-  'BYO beer (min 3, nothing above 6.5% ABV please)',
+  'BYO beer (nothing above 6.5% ABV please)',
   'Bathrooms at Bandstand, Sailboat House, Pergola',
   'If you puke, you\'re on cleanup. This is in the bylaws.',
   'Rain delays to Sunday. Hurricane cancels.',
@@ -78,10 +78,6 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
           <div className="sec-num">02 / RSVP</div>
           <h2 className="sec-title">Are you in?</h2>
         </div>
-        <p className="sec-desc">
-          Tell us where you land. Don't lie — we're capping at 40 and
-          Maya's already asked if she can bring her coworkers.
-        </p>
       </div>
       <div className="rsvp">
         <div className="rsvp-card">
