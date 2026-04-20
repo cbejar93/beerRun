@@ -151,10 +151,6 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
   const going = combined.filter(r => r.status === 'going').length;
   const maybe = combined.filter(r => r.status === 'maybe').length;
 
-  const toggleTask = (i) => {
-    setTasks(prev => prev.map((t, idx) => idx === i ? { ...t, done: !t.done } : t));
-  };
-
   return (
     <>
       <section className="section">
