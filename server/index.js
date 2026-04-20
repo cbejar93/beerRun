@@ -5,11 +5,18 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
 import jwt from 'jsonwebtoken';
+import morgan from 'morgan';
 import Rsvp from './models/Rsvp.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+
+const log = {
+  info:  (...a) => console.log(`[${new Date().toISOString()}] INFO `, ...a),
+  warn:  (...a) => console.warn(`[${new Date().toISOString()}] WARN `, ...a),
+  error: (...a) => console.error(`[${new Date().toISOString()}] ERROR`, ...a),
+};
 
 // Map Partiful (and generic) status strings to our schema values
 function normalizeStatus(raw = '') {
@@ -21,22 +28,29 @@ function normalizeStatus(raw = '') {
 
 app.use(cors());
 app.use(express.json());
+app.use(morgan('[:date[iso]] :method :url :status :res[content-length]b - :response-time ms'));
 
 app.post('/api/auth/host', (req, res) => {
   if (!process.env.HOST_PIN || req.body.pin !== process.env.HOST_PIN) {
+    log.warn('Failed host auth attempt');
     return res.status(401).json({ error: 'wrong pin' });
   }
   const token = jwt.sign({ host: true }, process.env.JWT_SECRET, { expiresIn: '12h' });
+  log.info('Host token issued');
   res.json({ token });
 });
 
 function requireHost(req, res, next) {
   const auth = req.headers.authorization;
-  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'unauthorized' });
+  if (!auth?.startsWith('Bearer ')) {
+    log.warn(`Unauthorized request: ${req.method} ${req.path}`);
+    return res.status(401).json({ error: 'unauthorized' });
+  }
   try {
     jwt.verify(auth.slice(7), process.env.JWT_SECRET);
     next();
   } catch {
+    log.warn(`Invalid token on: ${req.method} ${req.path}`);
     res.status(401).json({ error: 'invalid token' });
   }
 }
@@ -48,9 +62,10 @@ app.post('/api/rsvp', async (req, res) => {
   }
   try {
     const entry = await Rsvp.create({ name, beer: beer || '', status });
-    console.log(`RSVP: ${entry.name} → ${entry.status}${entry.beer ? ` (${entry.beer})` : ''}`);
+    log.info(`RSVP: ${entry.name} → ${entry.status}${entry.beer ? ` (${entry.beer})` : ''}`);
     res.status(201).json(entry);
   } catch (err) {
+    log.error('POST /api/rsvp:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -66,6 +81,7 @@ app.get('/api/rsvp', async (_req, res) => {
       entries,
     });
   } catch (err) {
+    log.error('GET /api/rsvp:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -98,9 +114,10 @@ app.post('/api/rsvp/import', requireHost, upload.single('file'), async (req, res
 
     if (toInsert.length) await Rsvp.insertMany(toInsert);
 
-    console.log(`CSV import: ${toInsert.length} inserted, ${rows.length - toInsert.length} skipped`);
+    log.info(`CSV import: ${toInsert.length} inserted, ${rows.length - toInsert.length} skipped (${rows.length} total in file)`);
     res.json({ imported: toInsert.length, skipped: rows.length - toInsert.length, total: rows.length });
   } catch (err) {
+    log.error('POST /api/rsvp/import:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -109,8 +126,10 @@ app.delete('/api/rsvp/:id', requireHost, async (req, res) => {
   try {
     const deleted = await Rsvp.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'not found' });
+    log.info(`Deleted RSVP: ${req.params.id}`);
     res.status(204).end();
   } catch (err) {
+    log.error('DELETE /api/rsvp/:id:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -118,10 +137,10 @@ app.delete('/api/rsvp/:id', requireHost, async (req, res) => {
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
-    console.log('MongoDB connected');
-    app.listen(PORT, () => console.log(`Beer Run API running on http://localhost:${PORT}`));
+    log.info('MongoDB connected');
+    app.listen(PORT, () => log.info(`Beer Run API running on port ${PORT}`));
   })
   .catch(err => {
-    console.error('MongoDB connection failed:', err.message);
+    log.error('MongoDB connection failed:', err.message);
     process.exit(1);
   });
