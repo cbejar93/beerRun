@@ -5,7 +5,7 @@ import Runners from './Runners';
 function AddRunner({ onAdd, authFetch }) {
   const [name, setName] = useState('');
   const [status, setStatus] = useState('going');
-  const [beer, setBeer] = useState('');
+  const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -18,7 +18,7 @@ function AddRunner({ onAdd, authFetch }) {
       const res = await authFetch('/api/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), status, beer: beer.trim() }),
+        body: JSON.stringify({ name: name.trim(), status, beer: note.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -26,7 +26,7 @@ function AddRunner({ onAdd, authFetch }) {
       } else {
         setResult({ ok: true, name: data.name });
         setName('');
-        setBeer('');
+        setNote('');
         onAdd?.();
       }
     } catch {
@@ -52,8 +52,8 @@ function AddRunner({ onAdd, authFetch }) {
           placeholder="Full name" style={inputStyle} required
         />
         <input
-          value={beer} onChange={e => setBeer(e.target.value)}
-          placeholder="Beer preference (optional)" style={inputStyle}
+          value={note} onChange={e => setNote(e.target.value)}
+          placeholder="Mile time / fun fact (optional)" style={inputStyle}
         />
         <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
           <option value="going">Going</option>
