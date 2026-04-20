@@ -105,6 +105,16 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
     });
   };
 
+  const deleteTask = async (id) => {
+    setTasks(prev => prev.filter(t => t._id !== id));
+    await authFetch(`/api/tasks/${id}`, { method: 'DELETE' });
+  };
+
+  const deleteRunner = async (id) => {
+    await authFetch(`/api/rsvp/${id}`, { method: 'DELETE' });
+    onImport?.();
+  };
+
   const addTask = async (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
@@ -199,6 +209,16 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
                   }} />
                   <span style={{ flex: 1 }}>{task.t}</span>
                   <span className="mono" style={{ fontSize: 11, opacity: 0.6 }}>{task.due}</span>
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteTask(task._id); }}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--muted)', fontSize: 16, lineHeight: 1,
+                      padding: '0 2px', opacity: 0.4, flexShrink: 0,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                  >×</button>
                 </li>
               ))}
             </ul>
@@ -304,7 +324,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
           </div>
         </div>{/* end grid */}
       </section>
-      <Runners apiRsvps={apiRsvps} />
+      <Runners apiRsvps={apiRsvps} onDelete={deleteRunner} />
 
     </>
   );

@@ -13,7 +13,7 @@ function initials(name) {
   return name.split(' ').map(p => p[0]).slice(0, 2).join('');
 }
 
-export default function Runners({ apiRsvps = [] }) {
+export default function Runners({ apiRsvps = [], onDelete }) {
   const [filter, setFilter] = useState('all');
 
   const allRunners = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
@@ -59,7 +59,7 @@ export default function Runners({ apiRsvps = [] }) {
       </div>
       <div className="runners-grid">
         {shown.map((r, i) => (
-          <div key={i} className={`runner ${r.status}`}>
+          <div key={i} className={`runner ${r.status}`} style={{ position: 'relative' }}>
             <div className="avatar" style={{ background: hueFor(r.name) }}>
               {initials(r.name)}
             </div>
@@ -70,6 +70,22 @@ export default function Runners({ apiRsvps = [] }) {
                 {r.status === 'going' ? 'IN' : r.status === 'maybe' ? 'MAYBE' : 'OUT'}
               </span>
             </div>
+            {onDelete && r._id && (
+              <button
+                onClick={e => { e.stopPropagation(); onDelete(r._id); }}
+                title="Remove runner"
+                style={{
+                  position: 'absolute', top: 10, right: 10,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--muted)', fontSize: 16, lineHeight: 1,
+                  padding: 4, borderRadius: 4, opacity: 0.5,
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '0.5'}
+              >
+                ×
+              </button>
+            )}
           </div>
         ))}
       </div>

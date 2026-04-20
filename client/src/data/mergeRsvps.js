@@ -2,6 +2,7 @@ import { RUNNERS } from './constants';
 
 export function mergeRsvps(apiRsvps) {
   const apiMapped = apiRsvps.map(r => ({
+    _id: r._id,
     name: r.name,
     pace: 'Rookie',
     status: r.status,
