@@ -170,7 +170,6 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
             { label: 'Confirmed runners', val: going, delta: '+3 this week' },
             { label: 'On the fence', val: maybe, delta: 'chase them monday' },
             { label: 'Beer pledged (cans)', val: 117, delta: 'target: 180' },
-            { label: 'Budget remaining', val: '$412', delta: 'bibs not ordered', warn: true },
           ].map((k, i) => (
             <div key={i} className="kpi">
               <div className="label">{k.label}</div>
