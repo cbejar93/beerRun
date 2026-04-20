@@ -3,7 +3,7 @@ import Nav from '../components/Nav';
 import Hero from '../components/Hero';
 import Ticker from '../components/Ticker';
 import RSVP from '../components/RSVP';
-import RouteMap from '../components/RouteMap';
+// import RouteMap from '../components/RouteMap';
 import Runners from '../components/Runners';
 import HostView from '../components/HostView';
 import TweaksPanel from '../components/TweaksPanel';
@@ -75,7 +75,7 @@ export default function BeerRunApp() {
           <Hero />
           <Ticker />
           <RSVP onRsvp={handleRsvp} rsvpStatus={liveRsvp?.status} apiRsvps={apiRsvps} />
-          <RouteMap />
+          {/* <RouteMap /> */}
           <Runners apiRsvps={apiRsvps} />
         </>
       ) : (

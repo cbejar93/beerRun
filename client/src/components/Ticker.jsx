@@ -1,7 +1,9 @@
+import { memo } from 'react';
+
 const ITEMS = [
   'CHUG RESPONSIBLY',
   'DNF = DID NOT FINISH YOUR BEER',
-  'BYO BREW (NO WHITE CLAWS)',
+  'BYO BREW',
   'SUNSCREEN IS NOT OPTIONAL',
   'PACE YOURSELF',
   'LAKE MERRITT · OAKLAND CA',
@@ -9,7 +11,7 @@ const ITEMS = [
   'WALKERS WELCOME',
 ];
 
-export default function Ticker() {
+const Ticker = memo(function Ticker() {
   const repeated = [...ITEMS, ...ITEMS];
   return (
     <div className="ticker">
@@ -23,4 +25,6 @@ export default function Ticker() {
       </div>
     </div>
   );
-}
+});
+
+export default Ticker;
