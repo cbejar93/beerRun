@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { mergeRsvps } from '../data/mergeRsvps';
 import Runners from './Runners';
 
@@ -82,19 +82,49 @@ function AddRunner({ onAdd, authFetch }) {
   );
 }
 
-const TASKS = [
-  { t: 'Buy bibs (Amazon, 2-day ship)', due: 'Due Apr 22', done: false },
-  { t: 'Confirm volunteer pourers at each mile', due: 'Due Apr 25', done: true },
-  { t: 'Send reminder to the 4 Maybes', due: 'Due Apr 30', done: false },
-  { t: 'Get finish-line champagne', due: 'Due May 22', done: false },
-  { t: 'Book post-run taco truck', due: 'Due May 10', done: false },
-];
-
 export default function HostView({ apiRsvps = [], onImport, authFetch = fetch }) {
-  const [tasks, setTasks] = useState(TASKS);
+  const [tasks, setTasks] = useState([]);
+  const [newTask, setNewTask] = useState('');
+  const [newDue, setNewDue] = useState('');
+  const [addingTask, setAddingTask] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/tasks').then(r => r.json()).then(setTasks).catch(() => {});
+  }, []);
+
+  const toggleTask = async (task) => {
+    const updated = { ...task, done: !task.done };
+    setTasks(prev => prev.map(t => t._id === task._id ? updated : t));
+    await authFetch(`/api/tasks/${task._id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: updated.done }),
+    });
+  };
+
+  const addTask = async (e) => {
+    e.preventDefault();
+    if (!newTask.trim()) return;
+    setAddingTask(true);
+    try {
+      const res = await authFetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: newTask.trim(), due: newDue.trim() }),
+      });
+      const task = await res.json();
+      if (res.ok) {
+        setTasks(prev => [...prev, task]);
+        setNewTask('');
+        setNewDue('');
+      }
+    } finally {
+      setAddingTask(false);
+    }
+  };
 
   const handleFile = async (file) => {
     if (!file || !file.name.endsWith('.csv')) {
@@ -158,8 +188,8 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
           <div className="kpi" style={{ padding: 24 }}>
             <div className="label">NEXT ACTIONS</div>
             <ul style={{ margin: '10px 0 0 0', padding: 0, listStyle: 'none' }}>
-              {tasks.map((task, i) => (
-                <li key={i} onClick={() => toggleTask(i)} style={{
+              {tasks.map((task) => (
+                <li key={task._id} onClick={() => toggleTask(task)} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 0', borderBottom: '1px solid color-mix(in oklab, var(--rule), transparent 85%)',
                   fontSize: 14, cursor: 'pointer',
@@ -177,6 +207,35 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
                 </li>
               ))}
             </ul>
+            <form onSubmit={addTask} style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <input
+                value={newTask} onChange={e => setNewTask(e.target.value)}
+                placeholder="New task…"
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 8, fontSize: 13,
+                  border: '1.5px solid var(--rule)', background: 'var(--paper)',
+                  color: 'var(--ink)', fontFamily: 'Inter, sans-serif', outline: 'none',
+                }}
+              />
+              <input
+                value={newDue} onChange={e => setNewDue(e.target.value)}
+                placeholder="Due date"
+                style={{
+                  width: 100, padding: '8px 10px', borderRadius: 8, fontSize: 13,
+                  border: '1.5px solid var(--rule)', background: 'var(--paper)',
+                  color: 'var(--ink)', fontFamily: 'Inter, sans-serif', outline: 'none',
+                }}
+              />
+              <button type="submit" disabled={addingTask} style={{
+                padding: '8px 14px', borderRadius: 8,
+                background: 'var(--stout)', color: 'var(--paper)',
+                border: 'none', fontFamily: "'Anton', sans-serif",
+                fontSize: 14, textTransform: 'uppercase', cursor: 'pointer',
+                letterSpacing: '0.02em', whiteSpace: 'nowrap',
+              }}>
+                + Add
+              </button>
+            </form>
           </div>
           <div className="kpi" style={{ padding: 24 }}>
             <div className="label">BROADCAST</div>

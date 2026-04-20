@@ -7,6 +7,14 @@ import { parse } from 'csv-parse/sync';
 import jwt from 'jsonwebtoken';
 import morgan from 'morgan';
 import Rsvp from './models/Rsvp.js';
+import Task from './models/Task.js';
+
+const SEED_TASKS = [
+  { t: 'Buy bibs (Amazon, 2-day ship)', due: 'Due Apr 22', done: false },
+  { t: 'Confirm volunteer pourers at each mile', due: 'Due Apr 25', done: true },
+  { t: 'Send reminder to the 4 Maybes', due: 'Due Apr 30', done: false },
+  { t: 'Get finish-line champagne', due: 'Due May 22', done: false },
+];
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -134,10 +142,65 @@ app.delete('/api/rsvp/:id', requireHost, async (req, res) => {
   }
 });
 
+app.get('/api/tasks', async (_req, res) => {
+  try {
+    const tasks = await Task.find().sort({ createdAt: 1 }).lean();
+    res.json(tasks);
+  } catch (err) {
+    log.error('GET /api/tasks:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tasks', requireHost, async (req, res) => {
+  const { t, due } = req.body;
+  if (!t?.trim()) return res.status(400).json({ error: 'task text required' });
+  try {
+    const task = await Task.create({ t: t.trim(), due: due?.trim() || '' });
+    log.info(`Task added: "${task.t}"`);
+    res.status(201).json(task);
+  } catch (err) {
+    log.error('POST /api/tasks:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/tasks/:id', requireHost, async (req, res) => {
+  try {
+    const task = await Task.findByIdAndUpdate(
+      req.params.id,
+      { done: req.body.done },
+      { new: true }
+    ).lean();
+    if (!task) return res.status(404).json({ error: 'not found' });
+    res.json(task);
+  } catch (err) {
+    log.error('PATCH /api/tasks/:id:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/tasks/:id', requireHost, async (req, res) => {
+  try {
+    const deleted = await Task.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'not found' });
+    log.info(`Task deleted: "${deleted.t}"`);
+    res.status(204).end();
+  } catch (err) {
+    log.error('DELETE /api/tasks/:id:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     log.info('MongoDB connected');
+    const count = await Task.countDocuments();
+    if (count === 0) {
+      await Task.insertMany(SEED_TASKS);
+      log.info('Seeded initial tasks');
+    }
     app.listen(PORT, () => log.info(`Beer Run API running on port ${PORT}`));
   })
   .catch(err => {
