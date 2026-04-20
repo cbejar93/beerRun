@@ -171,12 +171,11 @@ body { overflow-x: hidden; }
   border-radius: 50%;
   background: var(--punch);
   margin-right: 6px;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--punch), transparent 70%);
-  animation: pulse 1.8s ease-in-out infinite;
+  animation: blink 1.2s step-start infinite;
 }
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--punch), transparent 70%); }
-  50% { box-shadow: 0 0 0 7px color-mix(in oklab, var(--punch), transparent 90%); }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 /* ------- Hero ------- */
