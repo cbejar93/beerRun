@@ -2,6 +2,86 @@ import { useState, useMemo } from 'react';
 import { mergeRsvps } from '../data/mergeRsvps';
 import Runners from './Runners';
 
+function AddRunner({ onAdd, authFetch }) {
+  const [name, setName] = useState('');
+  const [status, setStatus] = useState('going');
+  const [beer, setBeer] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setResult(null);
+    try {
+      const res = await authFetch('/api/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), status, beer: beer.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResult({ error: data.error || 'Failed to add' });
+      } else {
+        setResult({ ok: true, name: data.name });
+        setName('');
+        setBeer('');
+        onAdd?.();
+      }
+    } catch {
+      setResult({ error: 'Request failed' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '10px 12px', borderRadius: 8,
+    border: '1.5px solid var(--rule)', background: 'var(--paper)',
+    color: 'var(--ink)', fontFamily: 'Inter, sans-serif', fontSize: 14,
+    boxSizing: 'border-box', outline: 'none',
+  };
+
+  return (
+    <div className="kpi" style={{ padding: 24 }}>
+      <div className="label">ADD RUNNER</div>
+      <form onSubmit={submit} style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <input
+          value={name} onChange={e => setName(e.target.value)}
+          placeholder="Full name" style={inputStyle} required
+        />
+        <input
+          value={beer} onChange={e => setBeer(e.target.value)}
+          placeholder="Beer preference (optional)" style={inputStyle}
+        />
+        <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+          <option value="going">Going</option>
+          <option value="maybe">Maybe</option>
+          <option value="out">Out</option>
+        </select>
+        <button type="submit" disabled={saving} style={{
+          padding: '11px', background: 'var(--stout)', color: 'var(--paper)',
+          border: 'none', borderRadius: 10, fontFamily: "'Anton', sans-serif",
+          fontSize: 18, textTransform: 'uppercase', cursor: saving ? 'not-allowed' : 'pointer',
+          letterSpacing: '0.02em', opacity: saving ? 0.6 : 1,
+        }}>
+          {saving ? 'Adding…' : 'Add Runner →'}
+        </button>
+        {result && (
+          <div style={{
+            padding: '10px 14px', borderRadius: 8, fontSize: 12,
+            fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em',
+            background: result.error ? 'color-mix(in oklab, var(--warn), transparent 85%)' : 'color-mix(in oklab, var(--punch), transparent 80%)',
+          }}>
+            {result.error ? `⚠ ${result.error}` : `✓ ${result.name} added`}
+          </div>
+        )}
+      </form>
+    </div>
+  );
+}
+
 const TASKS = [
   { t: 'Buy bibs (Amazon, 2-day ship)', due: 'Due Apr 22', done: false },
   { t: 'Confirm volunteer pourers at each mile', due: 'Due Apr 25', done: true },
@@ -122,8 +202,9 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
             </button>
           </div>
         </div>
-        {/* Partiful CSV import */}
-        <div style={{ marginTop: 24 }}>
+        {/* Add runner + CSV import */}
+        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <AddRunner onAdd={onImport} authFetch={authFetch} />
           <div className="kpi" style={{ padding: 24 }}>
             <div className="label">IMPORT FROM PARTIFUL</div>
             <p style={{ margin: '8px 0 16px', fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
@@ -167,9 +248,10 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
               </div>
             )}
           </div>
-        </div>
+        </div>{/* end grid */}
       </section>
       <Runners apiRsvps={apiRsvps} />
+
     </>
   );
 }
