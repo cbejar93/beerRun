@@ -4,7 +4,7 @@ import { mergeRsvps } from '../data/mergeRsvps';
 const FINE_PRINT = [
   'Run is self-timed. Honor system. We have a spreadsheet.',
   'BYO beer (nothing above 6.5% ABV please)',
-  'Bathrooms at Bandstand, Sailboat House, Pergola',
+  'Bathrooms at Snow Park, Sailboat House, Pergola',
   'If you puke, you\'re on cleanup. This is in the bylaws.',
   'Rain delays to Sunday. Hurricane cancels.',
 ];
@@ -59,7 +59,7 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
               Bib<br />#{bibNum}<br />Confirmed
             </div>
             <h3 className="rsvp-prompt" style={{ fontSize: 36 }}>
-              See you at the Bandstand, {name.split(' ')[0] || 'legend'}.
+              See you at Snow Park, {name.split(' ')[0] || 'legend'}.
             </h3>
             <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: 'var(--muted)' }}>
               We logged you as <strong style={{ color: 'var(--ink)' }}>{status.toUpperCase()}</strong>
