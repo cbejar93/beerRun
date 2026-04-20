@@ -17,7 +17,7 @@ export default function BeerRunApp() {
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [liveRsvp, setLiveRsvp] = useState(null);
   const [pinModalOpen, setPinModalOpen] = useState(false);
-  const { apiRsvps, addRsvp, refresh } = useRsvps();
+  const { apiRsvps, refresh } = useRsvps();
   const { isHost, hostToken, login, logout, authFetch } = useAuth();
 
   const setTheme = (t) => {
@@ -27,7 +27,7 @@ export default function BeerRunApp() {
 
   const handleRsvp = (entry) => {
     setLiveRsvp(entry);
-    addRsvp(entry);
+    refresh();
   };
 
   const handleHostClick = () => {
