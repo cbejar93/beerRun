@@ -4,7 +4,7 @@ export function mergeRsvps(apiRsvps) {
   const apiMapped = apiRsvps.map(r => ({
     _id: r._id,
     name: r.name,
-    pace: 'Rookie',
+    pace: '',
     status: r.status,
     note: r.beer || 'Freshly RSVPed',
   }));
