@@ -12,7 +12,5 @@ export function useRsvps() {
 
   useEffect(() => { fetchRsvps(); }, [fetchRsvps]);
 
-  const addRsvp = (entry) => setApiRsvps(prev => [entry, ...prev]);
-
-  return { apiRsvps, addRsvp, refresh: fetchRsvps };
+  return { apiRsvps, refresh: fetchRsvps };
 }

@@ -16,17 +16,28 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
   const [confirmed, setConfirmed] = useState(false);
   const [bibNum] = useState(() => Math.floor(Math.random() * 89) + 10);
 
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
   const submit = async () => {
     if (!status || !name.trim()) return;
+    setSubmitting(true);
+    setError(null);
     try {
-      await fetch('/api/rsvp', {
+      const res = await fetch('/api/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, beer, status }),
       });
-    } catch {}
-    setConfirmed(true);
-    onRsvp?.({ name, beer, status });
+      if (!res.ok) throw new Error('Failed to save');
+      const entry = await res.json();
+      setConfirmed(true);
+      onRsvp?.(entry);
+    } catch {
+      setError('Something went wrong — try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (confirmed) {
@@ -110,12 +121,17 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
             value={beer}
             onChange={e => setBeer(e.target.value)}
           />
+          {error && (
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--punch)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {error}
+            </p>
+          )}
           <button
             className="rsvp-confirm"
-            disabled={!status || !name.trim()}
+            disabled={!status || !name.trim() || submitting}
             onClick={submit}
           >
-            {status === 'out' ? 'Send regrets' : 'Lock it in'}
+            {submitting ? 'Saving…' : status === 'out' ? 'Send regrets' : 'Lock it in'}
             <span className="mono" style={{ fontSize: 12, opacity: 0.7 }}>→</span>
           </button>
         </div>
