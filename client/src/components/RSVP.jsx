@@ -19,6 +19,10 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
+  const going = combined.filter(r => r.status === 'going').length;
+  const maybe = combined.filter(r => r.status === 'maybe').length;
+
   const submit = async () => {
     if (!status || !name.trim()) return;
     setSubmitting(true);
@@ -77,10 +81,6 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
       </section>
     );
   }
-
-  const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
-  const going = combined.filter(r => r.status === 'going').length;
-  const maybe = combined.filter(r => r.status === 'maybe').length;
 
   return (
     <section className="section" id="rsvp">
