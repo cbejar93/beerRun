@@ -11,25 +11,29 @@ function formatElapsed(ms) {
 }
 
 export default function Results() {
+  const [year, setYear] = useState(new Date().getFullYear());
   const [startedAt, setStartedAt] = useState(null);
   const [results, setResults] = useState([]);
+  const [years, setYears] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const load = () =>
-    fetch('/api/results')
+  const load = (y) =>
+    fetch(`/api/results?year=${y}`)
       .then(r => r.json())
       .then(data => {
+        setYear(data.year);
         setStartedAt(data.startedAt ? new Date(data.startedAt) : null);
         setResults(data.results || []);
+        setYears(data.years || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
   useEffect(() => {
-    load();
-    const id = setInterval(load, 10000);
+    load(year);
+    const id = setInterval(() => load(year), 10000);
     return () => clearInterval(id);
-  }, []);
+  }, [year]);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--paper)' }}>
@@ -39,8 +43,24 @@ export default function Results() {
             <div className="brand-mark">3</div>
             <span>Beer Run · '26</span>
           </Link>
-          <div className="nav-meta mono">
-            <span>RESULTS · MAY 23</span>
+          <div className="nav-meta mono" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {years.length > 1 && years.map(y => (
+              <button
+                key={y}
+                onClick={() => setYear(y)}
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                  background: y === year ? 'var(--stout)' : 'none',
+                  color: y === year ? 'var(--paper)' : 'var(--ink)',
+                  border: '1.5px solid var(--rule)', padding: '4px 10px',
+                  borderRadius: 999, cursor: 'pointer',
+                }}
+              >
+                {y}
+              </button>
+            ))}
+            <span>RESULTS · {year}</span>
           </div>
         </div>
       </nav>
