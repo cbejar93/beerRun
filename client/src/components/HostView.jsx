@@ -12,6 +12,7 @@ function formatElapsed(ms) {
 
 function FinishLine({ apiRsvps, authFetch }) {
   const [raceStart, setRaceStart] = useState(null);
+  const [raceEnd, setRaceEnd] = useState(null);
   const [results, setResults] = useState([]);
   const [elapsed, setElapsed] = useState(0);
   const [resetting, setResetting] = useState(false);
@@ -26,29 +27,43 @@ function FinishLine({ apiRsvps, authFetch }) {
       .then(r => r.json())
       .then(data => {
         if (data.startedAt) setRaceStart(new Date(data.startedAt));
+        if (data.endedAt) setRaceEnd(new Date(data.endedAt));
         setResults(data.results || []);
       })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!raceStart) return;
+    if (!raceStart || raceEnd) return;
     const id = setInterval(() => setElapsed(Date.now() - raceStart.getTime()), 500);
     return () => clearInterval(id);
-  }, [raceStart]);
+  }, [raceStart, raceEnd]);
+
+  useEffect(() => {
+    if (raceEnd && raceStart) setElapsed(raceEnd.getTime() - raceStart.getTime());
+  }, [raceEnd, raceStart]);
 
   const startRace = async () => {
     const res = await authFetch('/api/results/start', { method: 'POST' });
     const data = await res.json();
     setRaceStart(new Date(data.startedAt));
+    setRaceEnd(null);
     setResults([]);
+    setElapsed(0);
+  };
+
+  const endRace = async () => {
+    const res = await authFetch('/api/results/end', { method: 'POST' });
+    const data = await res.json();
+    setRaceEnd(new Date(data.endedAt));
   };
 
   const resetRace = async () => {
-    if (!confirm('Reset the race? This clears all finish times.')) return;
+    if (!confirm('Wipe ALL race data? This cannot be undone.')) return;
     setResetting(true);
     await authFetch('/api/results/start', { method: 'DELETE' });
     setRaceStart(null);
+    setRaceEnd(null);
     setResults([]);
     setElapsed(0);
     setResetting(false);
@@ -107,24 +122,49 @@ function FinishLine({ apiRsvps, authFetch }) {
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: 24, padding: '16px 24px',
-            border: '2px solid var(--rule)', borderRadius: 14,
-            background: 'var(--card)',
+            border: `2px solid ${raceEnd ? 'var(--muted)' : 'var(--rule)'}`,
+            borderRadius: 14,
+            background: raceEnd ? 'color-mix(in oklab, var(--muted), transparent 90%)' : 'var(--card)',
           }}>
             <div>
               <div className="mono" style={{ fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
-                Elapsed
+                {raceEnd ? 'Final time' : 'Elapsed'}
               </div>
               <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 52, lineHeight: 1, letterSpacing: '0.02em' }}>
                 {formatElapsed(elapsed)}
               </div>
+              {raceEnd && (
+                <div className="mono" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.5, marginTop: 4 }}>
+                  Race ended
+                </div>
+              )}
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div className="mono" style={{ fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
-                Finished
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+              <div style={{ textAlign: 'right' }}>
+                <div className="mono" style={{ fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                  Finished
+                </div>
+                <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 52, lineHeight: 1 }}>
+                  {results.length}
+                </div>
               </div>
-              <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 52, lineHeight: 1 }}>
-                {results.length}
-              </div>
+              {!raceEnd && (
+                <button
+                  onClick={endRace}
+                  style={{
+                    padding: '8px 18px',
+                    background: 'var(--warn)', color: 'var(--paper)',
+                    border: 'none', borderRadius: 8,
+                    fontFamily: "'Anton', sans-serif", fontSize: 15,
+                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                    cursor: 'pointer', transition: 'opacity 0.1s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  End Race
+                </button>
+              )}
             </div>
           </div>
 
