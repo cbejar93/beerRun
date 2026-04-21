@@ -104,6 +104,8 @@ app.post('/api/rsvp', rsvpLimiter, async (req, res) => {
   if (!name || !status || !['going', 'maybe', 'out'].includes(status)) {
     return res.status(400).json({ error: 'name and valid status required' });
   }
+  if (name.length > 50) return res.status(400).json({ error: 'name too long (max 50)' });
+  if (beer && beer.length > 80) return res.status(400).json({ error: 'bringing field too long (max 80)' });
   try {
     const entry = await Rsvp.create({ name, beer: beer || '', status });
     log.info(`RSVP: ${entry.name} → ${entry.status}${entry.beer ? ` (${entry.beer})` : ''}`);

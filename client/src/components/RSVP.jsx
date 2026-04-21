@@ -115,12 +115,14 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
             placeholder="Your name (the one on your ID)"
             value={name}
             onChange={e => setName(e.target.value)}
+            maxLength={50}
           />
           <input
             className="rsvp-input"
             placeholder="What are you bringing? (e.g. 6-pack of IPA, kombucha if you're out)"
             value={beer}
             onChange={e => setBeer(e.target.value)}
+            maxLength={80}
           />
           {error && (
             <p style={{ margin: 0, fontSize: 13, color: 'var(--punch)', fontFamily: "'JetBrains Mono', monospace" }}>
