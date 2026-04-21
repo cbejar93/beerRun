@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { mergeRsvps } from '../data/mergeRsvps';
 import Runners from './Runners';
@@ -16,6 +16,9 @@ function FinishLine({ apiRsvps, authFetch }) {
   const [results, setResults] = useState([]);
   const [elapsed, setElapsed] = useState(0);
   const [resetting, setResetting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const pauseOffsetRef = useRef(0); // total ms spent paused
+  const pausedAtRef = useRef(null); // when current pause started
 
   const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
   const goingNames = combined.filter(r => r.status === 'going').map(r => r.name);
@@ -26,26 +29,49 @@ function FinishLine({ apiRsvps, authFetch }) {
     fetch('/api/results')
       .then(r => r.json())
       .then(data => {
-        if (data.startedAt) setRaceStart(new Date(data.startedAt));
-        if (data.endedAt) setRaceEnd(new Date(data.endedAt));
+        if (data.startedAt) {
+          const start = new Date(data.startedAt);
+          setRaceStart(start);
+          if (data.endedAt) {
+            const end = new Date(data.endedAt);
+            setRaceEnd(end);
+            setElapsed(end.getTime() - start.getTime());
+          }
+        }
         setResults(data.results || []);
       })
       .catch(() => {});
   }, []);
 
+  // Timer ticks only when race is running and not paused/ended
   useEffect(() => {
-    if (!raceStart || raceEnd) return;
-    const id = setInterval(() => setElapsed(Date.now() - raceStart.getTime()), 500);
+    if (!raceStart || raceEnd || isPaused) return;
+    const id = setInterval(
+      () => setElapsed(Date.now() - raceStart.getTime() - pauseOffsetRef.current),
+      500,
+    );
     return () => clearInterval(id);
-  }, [raceStart, raceEnd]);
+  }, [raceStart, raceEnd, isPaused]);
 
-  useEffect(() => {
-    if (raceEnd && raceStart) setElapsed(raceEnd.getTime() - raceStart.getTime());
-  }, [raceEnd, raceStart]);
+  const togglePause = () => {
+    if (!isPaused) {
+      pausedAtRef.current = Date.now();
+      setIsPaused(true);
+    } else {
+      if (pausedAtRef.current) {
+        pauseOffsetRef.current += Date.now() - pausedAtRef.current;
+        pausedAtRef.current = null;
+      }
+      setIsPaused(false);
+    }
+  };
 
   const startRace = async () => {
     const res = await authFetch('/api/results/start', { method: 'POST' });
     const data = await res.json();
+    pauseOffsetRef.current = 0;
+    pausedAtRef.current = null;
+    setIsPaused(false);
     setRaceStart(new Date(data.startedAt));
     setRaceEnd(null);
     setResults([]);
@@ -53,15 +79,26 @@ function FinishLine({ apiRsvps, authFetch }) {
   };
 
   const endRace = async () => {
+    // Finalize any active pause so the snapshot is accurate
+    if (isPaused && pausedAtRef.current) {
+      pauseOffsetRef.current += Date.now() - pausedAtRef.current;
+      pausedAtRef.current = null;
+    }
+    const snapshot = Date.now() - raceStart.getTime() - pauseOffsetRef.current;
+    setElapsed(snapshot);
+    setIsPaused(true); // freeze timer immediately
     const res = await authFetch('/api/results/end', { method: 'POST' });
     const data = await res.json();
     setRaceEnd(new Date(data.endedAt));
   };
 
   const resetRace = async () => {
-    if (!confirm('Wipe ALL race data? This cannot be undone.')) return;
+    if (!confirm('Wipe this year\'s race data? This cannot be undone.')) return;
     setResetting(true);
     await authFetch('/api/results/start', { method: 'DELETE' });
+    pauseOffsetRef.current = 0;
+    pausedAtRef.current = null;
+    setIsPaused(false);
     setRaceStart(null);
     setRaceEnd(null);
     setResults([]);
@@ -149,21 +186,38 @@ function FinishLine({ apiRsvps, authFetch }) {
                 </div>
               </div>
               {!raceEnd && (
-                <button
-                  onClick={endRace}
-                  style={{
-                    padding: '8px 18px',
-                    background: 'var(--warn)', color: 'var(--paper)',
-                    border: 'none', borderRadius: 8,
-                    fontFamily: "'Anton', sans-serif", fontSize: 15,
-                    textTransform: 'uppercase', letterSpacing: '0.04em',
-                    cursor: 'pointer', transition: 'opacity 0.1s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
-                  End Race
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={togglePause}
+                    style={{
+                      padding: '8px 18px',
+                      background: isPaused ? 'var(--punch)' : 'none',
+                      color: isPaused ? 'var(--punch-ink)' : 'var(--ink)',
+                      border: `1.5px solid ${isPaused ? 'var(--punch)' : 'var(--rule)'}`,
+                      borderRadius: 8,
+                      fontFamily: "'Anton', sans-serif", fontSize: 15,
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                      cursor: 'pointer', transition: 'all 0.1s',
+                    }}
+                  >
+                    {isPaused ? '▶ Resume' : '⏸ Pause'}
+                  </button>
+                  <button
+                    onClick={endRace}
+                    style={{
+                      padding: '8px 18px',
+                      background: 'var(--warn)', color: 'var(--paper)',
+                      border: 'none', borderRadius: 8,
+                      fontFamily: "'Anton', sans-serif", fontSize: 15,
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                      cursor: 'pointer', transition: 'opacity 0.1s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                  >
+                    End Race
+                  </button>
+                </div>
               )}
             </div>
           </div>
