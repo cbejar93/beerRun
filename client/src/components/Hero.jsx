@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Countdown from './Countdown';
 
 export default function Hero() {
@@ -37,6 +38,19 @@ export default function Hero() {
               <span className="val">$15 + BYO Beer</span>
             </div>
           </div>
+          <Link
+            to="/results"
+            style={{
+              display: 'inline-block', marginTop: 20,
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 12,
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+              color: 'var(--ink)', textDecoration: 'none',
+              border: '1.5px solid var(--rule)', padding: '8px 16px',
+              borderRadius: 999, opacity: 0.75,
+            }}
+          >
+            Race Results →
+          </Link>
         </div>
         <div className="hero-right">
           <div className="stamp">

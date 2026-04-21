@@ -165,8 +165,8 @@ function FinishLine({ apiRsvps, authFetch }) {
                     <div key={r._id} style={{
                       display: 'flex', alignItems: 'center', gap: 12,
                       padding: '10px 14px', borderRadius: 10,
-                      background: i === 0 ? 'color-mix(in oklab, var(--punch), transparent 85%)' : 'var(--card)',
-                      border: `1.5px solid ${i === 0 ? 'var(--punch)' : 'var(--rule)'}`,
+                      background: i === 0 ? 'color-mix(in oklab, var(--amber), transparent 85%)' : 'var(--card)',
+                      border: `1.5px solid ${i === 0 ? 'var(--amber)' : 'var(--rule)'}`,
                     }}>
                       <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, width: 32, flexShrink: 0 }}>#{i + 1}</span>
                       <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 16 }}>{r.name}</span>

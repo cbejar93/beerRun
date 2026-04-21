@@ -42,9 +42,6 @@ export default function Nav({ role, setRole, isHost, onHostClick }) {
           </div>
         )}
         <div className="nav-meta mono">
-          <Link to="/results" style={{ color: 'var(--ink)', textDecoration: 'none', opacity: 0.7 }}>
-            Results
-          </Link>
           <span><span className="dot" />LIVE · {daysOut} DAYS OUT</span>
         </div>
       </div>

@@ -672,7 +672,7 @@ body { overflow-x: hidden; }
   left: 0; top: 0; bottom: 0;
   width: 5px;
 }
-.runner.going::before { background: var(--punch); }
+.runner.going::before { background: var(--amber); }
 .runner.maybe::before { background: var(--amber); }
 .runner.out::before { background: var(--muted); opacity: 0.4; }
 .runner.out { opacity: 0.5; }
@@ -715,7 +715,7 @@ body { overflow-x: hidden; }
   letter-spacing: 0.08em;
   font-weight: 600;
 }
-.runner.going .runner-status-pill { background: var(--punch); color: var(--punch-ink); }
+.runner.going .runner-status-pill { background: var(--amber); color: var(--paper); }
 .runner.maybe .runner-status-pill { background: var(--amber); color: var(--paper); }
 .runner.out .runner-status-pill { background: var(--stout); color: var(--paper); }
 
