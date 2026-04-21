@@ -220,7 +220,7 @@ export default function Results() {
       </section>
 
       <footer className="foot">
-        <span>© 2026 BEER RUN SOCIETY · OAKLAND CA</span>
+        <span>© 2026 BEER RUN PLANNING COMMISSION · OAKLAND CA</span>
         <span>CHUG RESPONSIBLY · RUN WITH FRIENDS</span>
       </footer>
     </div>

@@ -68,7 +68,7 @@ export default function BeerRunApp() {
       {/* <RouteMap /> */}
       <Runners apiRsvps={apiRsvps} />
       <footer className="foot">
-        <span>© 2026 BEER RUN SOCIETY · OAKLAND CA</span>
+        <span>© 2026 BEER RUN PLANNING COMMISSION · OAKLAND CA</span>
         <span>CHUG RESPONSIBLY · RUN WITH FRIENDS</span>
         <span>MADE WITH SWEAT · MOSTLY</span>
       </footer>
