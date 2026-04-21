@@ -52,7 +52,7 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
         <div className="sec-head">
           <div>
             <div className="sec-num">02 / RSVP</div>
-            <h2 className="sec-title">{isOut ? 'No worries.' : isMaybe ? 'We'll hold a spot.' : 'You're in.'}</h2>
+            <h2 className="sec-title">{isOut ? 'No worries.' : isMaybe ? "We'll hold a spot." : "You're in."}</h2>
           </div>
         </div>
         <div className="rsvp">
