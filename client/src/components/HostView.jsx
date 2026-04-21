@@ -560,7 +560,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
                 font: 'inherit', fontSize: 14, resize: 'none',
                 fontFamily: 'Inter, sans-serif', boxSizing: 'border-box',
               }}
-              defaultValue="heads up — pick up your bib from the bandstand at 10:30. maya is bringing extra stout for the pergola stop. don't be late."
+              placeholder="Working on this…"
             />
             <button style={{
               marginTop: 10, width: '100%', padding: '12px',
