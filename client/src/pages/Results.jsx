@@ -95,40 +95,77 @@ export default function Results() {
           </div>
         )}
 
-        {results.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {results.map((r, i) => {
-              const ms = startedAt ? new Date(r.finishedAt).getTime() - startedAt.getTime() : 0;
-              const isLeader = i === 0;
-              return (
-                <div key={r._id} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '56px 1fr auto',
-                  alignItems: 'center',
-                  gap: 16,
-                  padding: '18px 20px',
-                  border: `2px solid ${isLeader ? 'var(--punch)' : 'var(--rule)'}`,
-                  borderRadius: 14,
-                  background: isLeader ? 'color-mix(in oklab, var(--punch), transparent 88%)' : 'var(--card)',
-                }}>
-                  <div style={{ fontFamily: "'Anton', sans-serif", fontSize: i < 3 ? 30 : 22, textAlign: 'center', lineHeight: 1 }}>
-                    {i < 3 ? MEDALS[i] : `#${i + 1}`}
-                  </div>
-                  <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 22, textTransform: 'uppercase', letterSpacing: '0.01em' }}>
-                    {r.name}
-                  </div>
-                  <div style={{
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 600,
-                    color: isLeader ? 'var(--punch)' : 'var(--ink)',
-                    letterSpacing: '0.04em', whiteSpace: 'nowrap',
-                  }}>
-                    {formatElapsed(ms)}
-                  </div>
+        {results.length > 0 && (() => {
+          const winner = results[0];
+          const rest = results.slice(1);
+          const winnerMs = startedAt ? new Date(winner.finishedAt).getTime() - startedAt.getTime() : 0;
+          return (
+            <>
+              {/* Order of the Lake */}
+              <div style={{
+                border: '3px solid var(--rule)',
+                borderRadius: 20,
+                padding: '36px 32px',
+                background: 'var(--stout)',
+                color: 'var(--paper)',
+                marginBottom: 32,
+                textAlign: 'center',
+              }}>
+                <div className="mono" style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.6, marginBottom: 16 }}>
+                  ✦ Order of the Lake ✦
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 64, textTransform: 'uppercase', lineHeight: 0.95, letterSpacing: '0.01em' }}>
+                  {winner.name}
+                </div>
+                <div style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 32,
+                  fontWeight: 600,
+                  color: 'var(--punch)',
+                  marginTop: 16,
+                  letterSpacing: '0.04em',
+                }}>
+                  {formatElapsed(winnerMs)}
+                </div>
+                <div className="mono" style={{ fontSize: 11, opacity: 0.5, marginTop: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Vol. III Champion · Lake Merritt Beer Run
+                </div>
+              </div>
+
+              {/* Rest of the field */}
+              {rest.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {rest.map((r, i) => {
+                    const ms = startedAt ? new Date(r.finishedAt).getTime() - startedAt.getTime() : 0;
+                    const place = i + 2;
+                    return (
+                      <div key={r._id} style={{
+                        display: 'grid',
+                        gridTemplateColumns: '56px 1fr auto',
+                        alignItems: 'center',
+                        gap: 16,
+                        padding: '16px 20px',
+                        border: '2px solid var(--rule)',
+                        borderRadius: 14,
+                        background: 'var(--card)',
+                      }}>
+                        <div style={{ fontFamily: "'Anton', sans-serif", fontSize: place <= 3 ? 28 : 20, textAlign: 'center', lineHeight: 1 }}>
+                          {place === 2 ? '🥈' : place === 3 ? '🥉' : `#${place}`}
+                        </div>
+                        <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 20, textTransform: 'uppercase', letterSpacing: '0.01em' }}>
+                          {r.name}
+                        </div>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 600, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+                          {formatElapsed(ms)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </section>
 
       <footer className="foot">
