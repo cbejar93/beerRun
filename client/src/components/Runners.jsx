@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { mergeRsvps } from '../data/mergeRsvps';
 
-const AVATAR_HUES = ['#B8701C', '#8A4F12', '#C8F03C', '#1F1410', '#E89944', '#6B5A45'];
+const AVATAR_HUES = ['#B8701C', '#8A4F12', '#E89944', '#1F1410', '#C87E24', '#6B5A45', '#5A3E2B', '#A05A18'];
 
 function hueFor(name) {
   let h = 0;
