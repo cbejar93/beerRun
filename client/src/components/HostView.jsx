@@ -1,6 +1,304 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { mergeRsvps } from '../data/mergeRsvps';
+import { EVENT_DATE } from '../data/constants';
 import Runners from './Runners';
+
+function formatElapsed(ms) {
+  const totalSecs = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function FinishLine({ apiRsvps, authFetch }) {
+  const [raceStart, setRaceStart] = useState(null);
+  const [raceEnd, setRaceEnd] = useState(null);
+  const [results, setResults] = useState([]);
+  const [elapsed, setElapsed] = useState(0);
+  const [resetting, setResetting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const pauseOffsetRef = useRef(0); // total ms spent paused
+  const pausedAtRef = useRef(null); // when current pause started
+
+  const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
+  const goingNames = combined.filter(r => r.status === 'going').map(r => r.name);
+  const finishedNames = new Set(results.map(r => r.name.toLowerCase()));
+  const remaining = goingNames.filter(n => !finishedNames.has(n.toLowerCase()));
+
+  useEffect(() => {
+    fetch('/api/results')
+      .then(r => r.json())
+      .then(data => {
+        if (data.startedAt) {
+          const start = new Date(data.startedAt);
+          setRaceStart(start);
+          if (data.endedAt) {
+            const end = new Date(data.endedAt);
+            setRaceEnd(end);
+            setElapsed(end.getTime() - start.getTime());
+          }
+        }
+        setResults(data.results || []);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Timer ticks only when race is running and not paused/ended
+  useEffect(() => {
+    if (!raceStart || raceEnd || isPaused) return;
+    const id = setInterval(
+      () => setElapsed(Date.now() - raceStart.getTime() - pauseOffsetRef.current),
+      500,
+    );
+    return () => clearInterval(id);
+  }, [raceStart, raceEnd, isPaused]);
+
+  const togglePause = () => {
+    if (!isPaused) {
+      pausedAtRef.current = Date.now();
+      setIsPaused(true);
+    } else {
+      if (pausedAtRef.current) {
+        pauseOffsetRef.current += Date.now() - pausedAtRef.current;
+        pausedAtRef.current = null;
+      }
+      setIsPaused(false);
+    }
+  };
+
+  const startRace = async () => {
+    const res = await authFetch('/api/results/start', { method: 'POST' });
+    const data = await res.json();
+    pauseOffsetRef.current = 0;
+    pausedAtRef.current = null;
+    setIsPaused(false);
+    setRaceStart(new Date(data.startedAt));
+    setRaceEnd(null);
+    setResults([]);
+    setElapsed(0);
+  };
+
+  const endRace = async () => {
+    // Finalize any active pause so the snapshot is accurate
+    if (isPaused && pausedAtRef.current) {
+      pauseOffsetRef.current += Date.now() - pausedAtRef.current;
+      pausedAtRef.current = null;
+    }
+    const snapshot = Date.now() - raceStart.getTime() - pauseOffsetRef.current;
+    setElapsed(snapshot);
+    setIsPaused(true); // freeze timer immediately
+    const res = await authFetch('/api/results/end', { method: 'POST' });
+    const data = await res.json();
+    setRaceEnd(new Date(data.endedAt));
+  };
+
+  const resetRace = async () => {
+    if (!confirm('Wipe this year\'s race data? This cannot be undone.')) return;
+    setResetting(true);
+    await authFetch('/api/results/start', { method: 'DELETE' });
+    pauseOffsetRef.current = 0;
+    pausedAtRef.current = null;
+    setIsPaused(false);
+    setRaceStart(null);
+    setRaceEnd(null);
+    setResults([]);
+    setElapsed(0);
+    setResetting(false);
+  };
+
+  const recordFinish = async (name) => {
+    const res = await authFetch('/api/results', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      const entry = await res.json();
+      setResults(prev => [...prev, entry]);
+    }
+  };
+
+  const undoFinish = async (id) => {
+    await authFetch(`/api/results/${id}`, { method: 'DELETE' });
+    setResults(prev => prev.filter(r => r._id !== id));
+  };
+
+  return (
+    <section className="section" style={{ borderTop: '2px solid var(--rule)' }}>
+      <div className="sec-head">
+        <div>
+          <div className="sec-num">H.02 / FINISH LINE</div>
+          <h2 className="sec-title">Tap as they cross.</h2>
+        </div>
+        <p className="sec-desc">
+          Start the timer when the gun goes off, then tap each runner's card as they finish.{' '}
+          <Link to="/results" target="_blank" style={{ color: 'var(--amber)', textDecoration: 'none' }}>
+            Public results page ↗
+          </Link>
+        </p>
+      </div>
+
+      {!raceStart ? (
+        <button
+          onClick={startRace}
+          style={{
+            width: '100%', padding: '32px 24px',
+            background: 'var(--stout)', color: 'var(--paper)',
+            border: '3px solid var(--rule)', borderRadius: 16,
+            fontFamily: "'Anton', sans-serif", fontSize: 48,
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+            cursor: 'pointer', transition: 'transform 0.1s',
+          }}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          START RACE
+        </button>
+      ) : (
+        <>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 24, padding: '16px 24px',
+            border: `2px solid ${raceEnd ? 'var(--muted)' : 'var(--rule)'}`,
+            borderRadius: 14,
+            background: raceEnd ? 'color-mix(in oklab, var(--muted), transparent 90%)' : 'var(--card)',
+          }}>
+            <div>
+              <div className="mono" style={{ fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                {raceEnd ? 'Final time' : 'Elapsed'}
+              </div>
+              <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 52, lineHeight: 1, letterSpacing: '0.02em' }}>
+                {formatElapsed(elapsed)}
+              </div>
+              {raceEnd && (
+                <div className="mono" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.5, marginTop: 4 }}>
+                  Race ended
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+              <div style={{ textAlign: 'right' }}>
+                <div className="mono" style={{ fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                  Finished
+                </div>
+                <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 52, lineHeight: 1 }}>
+                  {results.length}
+                </div>
+              </div>
+              {!raceEnd && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={togglePause}
+                    style={{
+                      padding: '8px 18px',
+                      background: isPaused ? 'var(--punch)' : 'none',
+                      color: isPaused ? 'var(--punch-ink)' : 'var(--ink)',
+                      border: `1.5px solid ${isPaused ? 'var(--punch)' : 'var(--rule)'}`,
+                      borderRadius: 8,
+                      fontFamily: "'Anton', sans-serif", fontSize: 15,
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                      cursor: 'pointer', transition: 'all 0.1s',
+                    }}
+                  >
+                    {isPaused ? '▶ Resume' : '⏸ Pause'}
+                  </button>
+                  <button
+                    onClick={endRace}
+                    style={{
+                      padding: '8px 18px',
+                      background: 'var(--warn)', color: 'var(--paper)',
+                      border: 'none', borderRadius: 8,
+                      fontFamily: "'Anton', sans-serif", fontSize: 15,
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                      cursor: 'pointer', transition: 'opacity 0.1s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                  >
+                    End Race
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {remaining.length > 0 && (
+            <>
+              <div className="label" style={{ marginBottom: 12 }}>ON COURSE — {remaining.length} remaining</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 24 }}>
+                {remaining.map(name => (
+                  <button
+                    key={name}
+                    onClick={() => recordFinish(name)}
+                    style={{
+                      padding: '18px 14px', textAlign: 'center',
+                      background: 'var(--card)', border: '2px solid var(--rule)',
+                      borderRadius: 12, cursor: 'pointer',
+                      fontFamily: "'Anton', sans-serif", fontSize: 17,
+                      textTransform: 'uppercase', letterSpacing: '0.01em',
+                      color: 'var(--ink)', lineHeight: 1.2,
+                      transition: 'all 0.1s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--punch)'; e.currentTarget.style.borderColor = 'var(--punch)'; e.currentTarget.style.color = 'var(--punch-ink)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--card)'; e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.color = 'var(--ink)'; }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {results.length > 0 && (
+            <>
+              <div className="label" style={{ marginBottom: 12 }}>FINISHERS</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+                {results.map((r, i) => {
+                  const ms = raceStart ? new Date(r.finishedAt).getTime() - raceStart.getTime() : 0;
+                  return (
+                    <div key={r._id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 10,
+                      background: i === 0 ? 'color-mix(in oklab, var(--amber), transparent 85%)' : 'var(--card)',
+                      border: `1.5px solid ${i === 0 ? 'var(--amber)' : 'var(--rule)'}`,
+                    }}>
+                      <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, width: 32, flexShrink: 0 }}>#{i + 1}</span>
+                      <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 16 }}>{r.name}</span>
+                      <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{formatElapsed(ms)}</span>
+                      <button
+                        onClick={() => undoFinish(r._id)}
+                        title="Undo"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                      >×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <button
+            onClick={resetRace}
+            disabled={resetting}
+            style={{
+              background: 'none', border: '1.5px solid var(--rule)', borderRadius: 8,
+              padding: '8px 16px', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em',
+              color: 'var(--muted)', opacity: resetting ? 0.4 : 0.6,
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '0.6'}
+          >
+            Reset race
+          </button>
+        </>
+      )}
+    </section>
+  );
+}
 
 function AddRunner({ onAdd, authFetch }) {
   const [name, setName] = useState('');
@@ -170,7 +468,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
             <h2 className="sec-title">You're the captain.<br />Don't crash the boat.</h2>
           </div>
           <p className="sec-desc">
-            36 days out. Still time to panic. Everything you need to run
+            {Math.ceil((EVENT_DATE - new Date()) / (1000 * 60 * 60 * 24))} days out. Still time to panic. Everything you need to run
             the run, minus the actual running.
           </p>
         </div>
@@ -189,7 +487,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
           ))}
         </div>
 
-        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16 }}>
+        <div className="host-panel-grid">
           <div className="kpi" style={{ padding: 24 }}>
             <div className="label">NEXT ACTIONS</div>
             <ul style={{ margin: '10px 0 0 0', padding: 0, listStyle: 'none' }}>
@@ -222,7 +520,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
                 </li>
               ))}
             </ul>
-            <form onSubmit={addTask} style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <form onSubmit={addTask} className="task-add-form">
               <input
                 value={newTask} onChange={e => setNewTask(e.target.value)}
                 placeholder="New task…"
@@ -263,7 +561,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
                 font: 'inherit', fontSize: 14, resize: 'none',
                 fontFamily: 'Inter, sans-serif', boxSizing: 'border-box',
               }}
-              defaultValue="heads up — pick up your bib from the bandstand at 10:30. maya is bringing extra stout for the pergola stop. don't be late."
+              placeholder="Working on this…"
             />
             <button style={{
               marginTop: 10, width: '100%', padding: '12px',
@@ -277,7 +575,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
           </div>
         </div>
         {/* Add runner + CSV import */}
-        <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="host-panel-grid host-panel-grid--half">
           <AddRunner onAdd={onImport} authFetch={authFetch} />
           <div className="kpi" style={{ padding: 24 }}>
             <div className="label">IMPORT FROM PARTIFUL</div>
@@ -325,7 +623,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
         </div>{/* end grid */}
       </section>
       <Runners apiRsvps={apiRsvps} onDelete={deleteRunner} />
-
+      <FinishLine apiRsvps={apiRsvps} authFetch={authFetch} />
     </>
   );
 }

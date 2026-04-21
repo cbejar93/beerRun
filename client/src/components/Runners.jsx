@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { mergeRsvps } from '../data/mergeRsvps';
 
-const AVATAR_HUES = ['#B8701C', '#8A4F12', '#C8F03C', '#1F1410', '#E89944', '#6B5A45'];
+const AVATAR_HUES = ['#B8701C', '#8A4F12', '#E89944', '#1F1410', '#C8F03C', '#C87E24', '#6B5A45', '#5A3E2B', '#A05A18'];
 
 function hueFor(name) {
   let h = 0;
@@ -60,12 +60,12 @@ export default function Runners({ apiRsvps = [], onDelete }) {
       <div className="runners-grid">
         {shown.map((r, i) => (
           <div key={i} className={`runner ${r.status}`} style={{ position: 'relative' }}>
-            <div className="avatar" style={{ background: hueFor(r.name) }}>
+            <div className="avatar" style={{ background: hueFor(r.name), color: hueFor(r.name) === '#C8F03C' ? '#1F1410' : undefined }}>
               {initials(r.name)}
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="runner-name">{r.name}</div>
-              <div className="runner-meta">{r.pace ? `${r.pace} · ${r.note}` : r.note}</div>
+              <div className="runner-meta">{r.note}</div>
               <span className="runner-status-pill">
                 {r.status === 'going' ? 'IN' : r.status === 'maybe' ? 'MAYBE' : 'OUT'}
               </span>

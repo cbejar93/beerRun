@@ -11,6 +11,8 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import Rsvp from './models/Rsvp.js';
 import Task from './models/Task.js';
+import Result from './models/Result.js';
+import RaceState from './models/RaceState.js';
 
 const SEED_TASKS = [
   { t: 'Buy bibs (Amazon, 2-day ship)', due: 'Due Apr 22', done: false },
@@ -222,6 +224,90 @@ app.delete('/api/tasks/:id', requireHost, async (req, res) => {
     res.status(204).end();
   } catch (err) {
     log.error('DELETE /api/tasks/:id:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/results', async (req, res) => {
+  try {
+    const currentYear = new Date().getFullYear();
+    const year = req.query.year ? parseInt(req.query.year) : currentYear;
+    const [state, results, years] = await Promise.all([
+      RaceState.findOne({ year }).lean(),
+      Result.find({ year }).sort({ finishedAt: 1 }).lean(),
+      Result.distinct('year'),
+    ]);
+    res.json({ year, startedAt: state?.startedAt ?? null, endedAt: state?.endedAt ?? null, results, years: years.sort((a, b) => b - a) });
+  } catch (err) {
+    log.error('GET /api/results:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/results/start', requireHost, async (req, res) => {
+  try {
+    const year = new Date().getFullYear();
+    const startedAt = new Date();
+    await RaceState.findOneAndUpdate({ year }, { startedAt }, { upsert: true, new: true });
+    await Result.deleteMany({ year });
+    log.info(`Race ${year} started at ${startedAt.toISOString()}`);
+    res.json({ year, startedAt });
+  } catch (err) {
+    log.error('POST /api/results/start:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/results/end', requireHost, async (req, res) => {
+  try {
+    const year = new Date().getFullYear();
+    const endedAt = new Date();
+    await RaceState.findOneAndUpdate({ year }, { endedAt }, { new: true });
+    log.info(`Race ${year} ended at ${endedAt.toISOString()}`);
+    res.json({ endedAt });
+  } catch (err) {
+    log.error('POST /api/results/end:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/results/start', requireHost, async (req, res) => {
+  try {
+    const year = new Date().getFullYear();
+    await RaceState.deleteOne({ year });
+    await Result.deleteMany({ year });
+    log.info(`Race ${year} data wiped`);
+    res.status(204).end();
+  } catch (err) {
+    log.error('DELETE /api/results/start:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/results', requireHost, async (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'name required' });
+  try {
+    const year = new Date().getFullYear();
+    const existing = await Result.findOne({ year, name: new RegExp(`^${name.trim()}$`, 'i') });
+    if (existing) return res.status(409).json({ error: 'already recorded' });
+    const result = await Result.create({ name: name.trim(), finishedAt: new Date(), year });
+    log.info(`Finish recorded: ${result.name} (${year})`);
+    res.status(201).json(result);
+  } catch (err) {
+    log.error('POST /api/results:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/results/:id', requireHost, async (req, res) => {
+  try {
+    const deleted = await Result.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'not found' });
+    log.info(`Result removed: ${deleted.name}`);
+    res.status(204).end();
+  } catch (err) {
+    log.error('DELETE /api/results/:id:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
