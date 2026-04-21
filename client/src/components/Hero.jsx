@@ -47,7 +47,10 @@ export default function Hero() {
               color: 'var(--ink)', textDecoration: 'none',
               border: '1.5px solid var(--rule)', padding: '8px 16px',
               borderRadius: 999, opacity: 0.75,
+              transition: 'background 0.15s, color 0.15s, opacity 0.15s',
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--stout)'; e.currentTarget.style.color = 'var(--paper)'; e.currentTarget.style.opacity = '1'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--ink)'; e.currentTarget.style.opacity = '0.75'; }}
           >
             Race Results →
           </Link>
