@@ -97,8 +97,10 @@ export default function Results() {
 
         {results.length > 0 && (() => {
           const winner = results[0];
-          const rest = results.slice(1);
+          const last = results.length > 1 ? results[results.length - 1] : null;
+          const middle = results.slice(1, last ? results.length - 1 : undefined);
           const winnerMs = startedAt ? new Date(winner.finishedAt).getTime() - startedAt.getTime() : 0;
+          const lastMs = last && startedAt ? new Date(last.finishedAt).getTime() - startedAt.getTime() : 0;
           return (
             <>
               {/* Order of the Lake */}
@@ -119,11 +121,8 @@ export default function Results() {
                 </div>
                 <div style={{
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 32,
-                  fontWeight: 600,
-                  color: 'var(--punch)',
-                  marginTop: 16,
-                  letterSpacing: '0.04em',
+                  fontSize: 32, fontWeight: 600,
+                  color: 'var(--punch)', marginTop: 16, letterSpacing: '0.04em',
                 }}>
                   {formatElapsed(winnerMs)}
                 </div>
@@ -132,10 +131,10 @@ export default function Results() {
                 </div>
               </div>
 
-              {/* Rest of the field */}
-              {rest.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {rest.map((r, i) => {
+              {/* Middle field */}
+              {middle.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                  {middle.map((r, i) => {
                     const ms = startedAt ? new Date(r.finishedAt).getTime() - startedAt.getTime() : 0;
                     const place = i + 2;
                     return (
@@ -161,6 +160,36 @@ export default function Results() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* San Mateo County Resident */}
+              {last && (
+                <div style={{
+                  border: '3px dashed var(--rule)',
+                  borderRadius: 20,
+                  padding: '36px 32px',
+                  background: 'var(--card)',
+                  marginTop: middle.length === 0 ? 32 : 0,
+                  textAlign: 'center',
+                  opacity: 0.85,
+                }}>
+                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.5, marginBottom: 16 }}>
+                    ✦ San Mateo County Resident ✦
+                  </div>
+                  <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 64, textTransform: 'uppercase', lineHeight: 0.95, letterSpacing: '0.01em' }}>
+                    {last.name}
+                  </div>
+                  <div style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 32, fontWeight: 600,
+                    color: 'var(--muted)', marginTop: 16, letterSpacing: '0.04em',
+                  }}>
+                    {formatElapsed(lastMs)}
+                  </div>
+                  <div className="mono" style={{ fontSize: 11, opacity: 0.5, marginTop: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    #{results.length} · Still finished · Respect
+                  </div>
                 </div>
               )}
             </>
