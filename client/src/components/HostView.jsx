@@ -3,10 +3,18 @@ import { Link } from 'react-router-dom';
 import { mergeRsvps } from '../data/mergeRsvps';
 import Runners from './Runners';
 
+function formatElapsed(ms) {
+  const totalSecs = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 function FinishLine({ apiRsvps, authFetch }) {
-  const [name, setName] = useState('');
+  const [raceStart, setRaceStart] = useState(null);
   const [results, setResults] = useState([]);
-  const [saving, setSaving] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [resetting, setResetting] = useState(false);
 
   const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
   const goingNames = combined.filter(r => r.status === 'going').map(r => r.name);
@@ -16,47 +24,51 @@ function FinishLine({ apiRsvps, authFetch }) {
   useEffect(() => {
     fetch('/api/results')
       .then(r => r.json())
-      .then(setResults)
+      .then(data => {
+        if (data.startedAt) setRaceStart(new Date(data.startedAt));
+        setResults(data.results || []);
+      })
       .catch(() => {});
   }, []);
 
-  const recordFinish = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      const res = await authFetch('/api/results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      if (res.ok) {
-        const entry = await res.json();
-        setResults(prev => [...prev, entry]);
-        setName('');
-      }
-    } finally {
-      setSaving(false);
+  useEffect(() => {
+    if (!raceStart) return;
+    const id = setInterval(() => setElapsed(Date.now() - raceStart.getTime()), 500);
+    return () => clearInterval(id);
+  }, [raceStart]);
+
+  const startRace = async () => {
+    const res = await authFetch('/api/results/start', { method: 'POST' });
+    const data = await res.json();
+    setRaceStart(new Date(data.startedAt));
+    setResults([]);
+  };
+
+  const resetRace = async () => {
+    if (!confirm('Reset the race? This clears all finish times.')) return;
+    setResetting(true);
+    await authFetch('/api/results/start', { method: 'DELETE' });
+    setRaceStart(null);
+    setResults([]);
+    setElapsed(0);
+    setResetting(false);
+  };
+
+  const recordFinish = async (name) => {
+    const res = await authFetch('/api/results', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      const entry = await res.json();
+      setResults(prev => [...prev, entry]);
     }
   };
 
   const undoFinish = async (id) => {
     await authFetch(`/api/results/${id}`, { method: 'DELETE' });
     setResults(prev => prev.filter(r => r._id !== id));
-  };
-
-  const leaderTime = results[0] ? new Date(results[0].finishedAt).getTime() : null;
-
-  const formatGap = (ms) => {
-    if (ms === 0) return 'LEADER';
-    const s = Math.floor(ms / 1000);
-    return `+${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  };
-
-  const inputStyle = {
-    flex: 1, padding: '10px 12px', borderRadius: 8,
-    border: '1.5px solid var(--rule)', background: 'var(--paper)',
-    color: 'var(--ink)', fontFamily: 'Inter, sans-serif', fontSize: 14,
-    boxSizing: 'border-box', outline: 'none',
   };
 
   return (
@@ -67,93 +79,128 @@ function FinishLine({ apiRsvps, authFetch }) {
           <h2 className="sec-title">Tap as they cross.</h2>
         </div>
         <p className="sec-desc">
-          Hit the button the moment each runner finishes. Times are recorded automatically.{' '}
+          Start the timer when the gun goes off, then tap each runner's card as they finish.{' '}
           <Link to="/results" target="_blank" style={{ color: 'var(--punch)', textDecoration: 'none' }}>
-            Public results page →
+            Public results page ↗
           </Link>
         </p>
       </div>
 
-      <div className="host-panel-grid host-panel-grid--half">
-        <div className="kpi" style={{ padding: 24 }}>
-          <div className="label" style={{ marginBottom: 12 }}>RECORD FINISH</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <input
-              list="remaining-runners"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && recordFinish()}
-              placeholder="Runner name…"
-              style={inputStyle}
-            />
-            <datalist id="remaining-runners">
-              {remaining.map(n => <option key={n} value={n} />)}
-            </datalist>
-            <button
-              onClick={recordFinish}
-              disabled={!name.trim() || saving}
-              style={{
-                padding: '10px 20px', background: 'var(--punch)', color: 'var(--punch-ink)',
-                border: 'none', borderRadius: 10, fontFamily: "'Anton', sans-serif",
-                fontSize: 16, textTransform: 'uppercase', cursor: 'pointer',
-                letterSpacing: '0.04em', whiteSpace: 'nowrap',
-                opacity: (!name.trim() || saving) ? 0.5 : 1,
-              }}
-            >
-              {saving ? '…' : 'Finish ✓'}
-            </button>
-          </div>
-          {remaining.length > 0 && (
-            <div className="mono" style={{ marginTop: 10, fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {remaining.length} still out on course
+      {!raceStart ? (
+        <button
+          onClick={startRace}
+          style={{
+            width: '100%', padding: '32px 24px',
+            background: 'var(--stout)', color: 'var(--paper)',
+            border: '3px solid var(--rule)', borderRadius: 16,
+            fontFamily: "'Anton', sans-serif", fontSize: 48,
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+            cursor: 'pointer', transition: 'transform 0.1s',
+          }}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          START RACE
+        </button>
+      ) : (
+        <>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 24, padding: '16px 24px',
+            border: '2px solid var(--rule)', borderRadius: 14,
+            background: 'var(--card)',
+          }}>
+            <div>
+              <div className="mono" style={{ fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                Elapsed
+              </div>
+              <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 52, lineHeight: 1, letterSpacing: '0.02em' }}>
+                {formatElapsed(elapsed)}
+              </div>
             </div>
-          )}
-        </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="mono" style={{ fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                Finished
+              </div>
+              <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 52, lineHeight: 1 }}>
+                {results.length}
+              </div>
+            </div>
+          </div>
 
-        <div className="kpi" style={{ padding: 24 }}>
-          <div className="label" style={{ marginBottom: 12 }}>
-            FINISHERS · {results.length}
-          </div>
-          {results.length === 0 ? (
-            <div className="mono" style={{ fontSize: 12, opacity: 0.4, textTransform: 'uppercase' }}>
-              No finishers recorded yet
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {results.map((r, i) => {
-                const gap = leaderTime ? new Date(r.finishedAt).getTime() - leaderTime : 0;
-                return (
-                  <div key={r._id} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    fontSize: 14, padding: '8px 0',
-                    borderBottom: '1px solid color-mix(in oklab, var(--rule), transparent 85%)',
-                  }}>
-                    <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 16, width: 28, flexShrink: 0 }}>
-                      #{i + 1}
-                    </span>
-                    <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 15 }}>
-                      {r.name}
-                    </span>
-                    <span className="mono" style={{ fontSize: 11, opacity: 0.6 }}>
-                      {formatGap(gap)}
-                    </span>
-                    <button
-                      onClick={() => undoFinish(r._id)}
-                      title="Undo"
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--muted)', fontSize: 14, opacity: 0.4, padding: '0 2px',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                      onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
-                    >×</button>
-                  </div>
-                );
-              })}
-            </div>
+          {remaining.length > 0 && (
+            <>
+              <div className="label" style={{ marginBottom: 12 }}>ON COURSE — {remaining.length} remaining</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 24 }}>
+                {remaining.map(name => (
+                  <button
+                    key={name}
+                    onClick={() => recordFinish(name)}
+                    style={{
+                      padding: '18px 14px', textAlign: 'center',
+                      background: 'var(--card)', border: '2px solid var(--rule)',
+                      borderRadius: 12, cursor: 'pointer',
+                      fontFamily: "'Anton', sans-serif", fontSize: 17,
+                      textTransform: 'uppercase', letterSpacing: '0.01em',
+                      color: 'var(--ink)', lineHeight: 1.2,
+                      transition: 'all 0.1s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--punch)'; e.currentTarget.style.borderColor = 'var(--punch)'; e.currentTarget.style.color = 'var(--punch-ink)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--card)'; e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.color = 'var(--ink)'; }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
-        </div>
-      </div>
+
+          {results.length > 0 && (
+            <>
+              <div className="label" style={{ marginBottom: 12 }}>FINISHERS</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+                {results.map((r, i) => {
+                  const ms = raceStart ? new Date(r.finishedAt).getTime() - raceStart.getTime() : 0;
+                  return (
+                    <div key={r._id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 10,
+                      background: i === 0 ? 'color-mix(in oklab, var(--punch), transparent 85%)' : 'var(--card)',
+                      border: `1.5px solid ${i === 0 ? 'var(--punch)' : 'var(--rule)'}`,
+                    }}>
+                      <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, width: 32, flexShrink: 0 }}>#{i + 1}</span>
+                      <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 16 }}>{r.name}</span>
+                      <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{formatElapsed(ms)}</span>
+                      <button
+                        onClick={() => undoFinish(r._id)}
+                        title="Undo"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                      >×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <button
+            onClick={resetRace}
+            disabled={resetting}
+            style={{
+              background: 'none', border: '1.5px solid var(--rule)', borderRadius: 8,
+              padding: '8px 16px', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em',
+              color: 'var(--muted)', opacity: resetting ? 0.4 : 0.6,
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '0.6'}
+          >
+            Reset race
+          </button>
+        </>
+      )}
     </section>
   );
 }

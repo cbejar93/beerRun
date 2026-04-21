@@ -12,6 +12,7 @@ import path from 'path';
 import Rsvp from './models/Rsvp.js';
 import Task from './models/Task.js';
 import Result from './models/Result.js';
+import RaceState from './models/RaceState.js';
 
 const SEED_TASKS = [
   { t: 'Buy bibs (Amazon, 2-day ship)', due: 'Due Apr 22', done: false },
@@ -229,10 +230,38 @@ app.delete('/api/tasks/:id', requireHost, async (req, res) => {
 
 app.get('/api/results', async (_req, res) => {
   try {
-    const results = await Result.find().sort({ finishedAt: 1 }).lean();
-    res.json(results);
+    const [state, results] = await Promise.all([
+      RaceState.findOne().lean(),
+      Result.find().sort({ finishedAt: 1 }).lean(),
+    ]);
+    res.json({ startedAt: state?.startedAt ?? null, results });
   } catch (err) {
     log.error('GET /api/results:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/results/start', requireHost, async (req, res) => {
+  try {
+    const startedAt = new Date();
+    await RaceState.findOneAndUpdate({}, { startedAt }, { upsert: true, new: true });
+    await Result.deleteMany({});
+    log.info(`Race started at ${startedAt.toISOString()}`);
+    res.json({ startedAt });
+  } catch (err) {
+    log.error('POST /api/results/start:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/results/start', requireHost, async (req, res) => {
+  try {
+    await RaceState.deleteMany({});
+    await Result.deleteMany({});
+    log.info('Race reset');
+    res.status(204).end();
+  } catch (err) {
+    log.error('DELETE /api/results/start:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
