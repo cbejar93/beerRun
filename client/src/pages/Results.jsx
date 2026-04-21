@@ -118,15 +118,17 @@ export default function Results() {
         )}
 
         {results.length > 0 && (() => {
-          const winner = results[0];
-          const last = results.length > 1 ? results[results.length - 1] : null;
-          const middle = results.slice(1, last ? results.length - 1 : undefined);
-          const winnerMs = startedAt ? new Date(winner.finishedAt).getTime() - startedAt.getTime() : 0;
+          const finishers = results.filter(r => !r.dnf);
+          const dnfs = results.filter(r => r.dnf);
+          const winner = finishers[0];
+          const last = finishers.length > 1 ? finishers[finishers.length - 1] : null;
+          const middle = finishers.slice(1, last ? finishers.length - 1 : undefined);
+          const winnerMs = winner && startedAt ? new Date(winner.finishedAt).getTime() - startedAt.getTime() : 0;
           const lastMs = last && startedAt ? new Date(last.finishedAt).getTime() - startedAt.getTime() : 0;
           return (
             <>
               {/* Order of the Lake */}
-              <div style={{
+              {winner && <div style={{
                 border: '3px solid var(--rule)',
                 borderRadius: 20,
                 padding: '36px 32px',
@@ -151,7 +153,7 @@ export default function Results() {
                 <div className="mono" style={{ fontSize: 11, opacity: 0.5, marginTop: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   Vol. {edition(year)} Champion · Lake Merritt Beer Run
                 </div>
-              </div>
+              </div>}
 
               {/* Middle field */}
               {middle.length > 0 && (
@@ -210,7 +212,33 @@ export default function Results() {
                     {formatElapsed(lastMs)}
                   </div>
                   <div className="mono" style={{ fontSize: 11, opacity: 0.5, marginTop: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    #{results.length} · Still finished · Respect
+                    #{finishers.length} · Still finished · Respect
+                  </div>
+                </div>
+              )}
+
+              {/* DNF section */}
+              {dnfs.length > 0 && (
+                <div style={{ marginTop: 32 }}>
+                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.4, marginBottom: 12 }}>
+                    Did Not Finish
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {dnfs.map(r => (
+                      <div key={r._id} style={{
+                        display: 'grid', gridTemplateColumns: '56px 1fr auto',
+                        alignItems: 'center', gap: 16,
+                        padding: '14px 20px',
+                        border: '1.5px dashed var(--rule)',
+                        borderRadius: 12, opacity: 0.45,
+                      }}>
+                        <div className="mono" style={{ fontSize: 13, textAlign: 'center', fontWeight: 600 }}>DNF</div>
+                        <div style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, textTransform: 'uppercase', letterSpacing: '0.01em' }}>
+                          {r.name}
+                        </div>
+                        <div className="mono" style={{ fontSize: 13, opacity: 0.6 }}>—</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
