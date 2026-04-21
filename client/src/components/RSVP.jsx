@@ -68,7 +68,7 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
             </h3>
             <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: 'var(--muted)' }}>
               We logged you as <strong style={{ color: 'var(--ink)' }}>{status.toUpperCase()}</strong>
-              {beer ? <> · bringing <strong style={{ color: 'var(--ink)' }}>{beer}</strong></> : null}.
+              {!isOut && beer ? <> · bringing <strong style={{ color: 'var(--ink)' }}>{beer}</strong></> : null}.
               {!isOut && ' Check email for your bib number and the group chat invite.'}
             </p>
           </div>
