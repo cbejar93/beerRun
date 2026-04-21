@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
 import Hero from '../components/Hero';
 import Ticker from '../components/Ticker';
 import RSVP from '../components/RSVP';
 // import RouteMap from '../components/RouteMap';
 import Runners from '../components/Runners';
-import HostView from '../components/HostView';
 import TweaksPanel from '../components/TweaksPanel';
 import HostPinModal from '../components/HostPinModal';
 import { useRsvps } from '../hooks/useRsvps';
 import { useAuth } from '../hooks/useAuth';
 
 export default function BeerRunApp() {
-  const [role, setRole] = useState('guest');
   const [theme, setThemeState] = useState('amber');
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [liveRsvp, setLiveRsvp] = useState(null);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const { apiRsvps, refresh } = useRsvps();
-  const { isHost, hostToken, login, logout, authFetch } = useAuth();
+  const { isHost, login } = useAuth();
+  const navigate = useNavigate();
 
   const setTheme = (t) => {
     setThemeState(t);
@@ -32,7 +32,7 @@ export default function BeerRunApp() {
 
   const handleHostClick = () => {
     if (isHost) {
-      setRole('host');
+      navigate('/host');
     } else {
       setPinModalOpen(true);
     }
@@ -41,11 +41,11 @@ export default function BeerRunApp() {
   const handlePinSuccess = (token) => {
     login(token);
     setPinModalOpen(false);
-    setRole('host');
+    navigate('/host');
   };
 
   const handleSetRole = (r) => {
-    setRole(r);
+    if (r === 'host') navigate('/host');
   };
 
   useEffect(() => {
@@ -59,25 +59,14 @@ export default function BeerRunApp() {
     return () => window.removeEventListener('message', onMsg);
   }, []);
 
-  // If token expires or is cleared, drop back to guest
-  useEffect(() => {
-    if (!isHost && role === 'host') setRole('guest');
-  }, [isHost, role]);
-
   return (
     <>
-      <Nav role={role} setRole={handleSetRole} isHost={isHost} onHostClick={handleHostClick} />
-      {role === 'guest' ? (
-        <>
-          <Hero />
-          <Ticker />
-          <RSVP onRsvp={handleRsvp} rsvpStatus={liveRsvp?.status} apiRsvps={apiRsvps} />
-          {/* <RouteMap /> */}
-          <Runners apiRsvps={apiRsvps} />
-        </>
-      ) : (
-        <HostView apiRsvps={apiRsvps} onImport={refresh} authFetch={authFetch} />
-      )}
+      <Nav role="guest" setRole={handleSetRole} isHost={isHost} onHostClick={handleHostClick} />
+      <Hero />
+      <Ticker />
+      <RSVP onRsvp={handleRsvp} rsvpStatus={liveRsvp?.status} apiRsvps={apiRsvps} />
+      {/* <RouteMap /> */}
+      <Runners apiRsvps={apiRsvps} />
       <footer className="foot">
         <span>© 2026 BEER RUN SOCIETY · OAKLAND CA</span>
         <span>CHUG RESPONSIBLY · RUN WITH FRIENDS</span>
