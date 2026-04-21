@@ -60,7 +60,7 @@ export default function Runners({ apiRsvps = [], onDelete }) {
       <div className="runners-grid">
         {shown.map((r, i) => (
           <div key={i} className={`runner ${r.status}`} style={{ position: 'relative' }}>
-            <div className="avatar" style={{ background: hueFor(r.name) }}>
+            <div className="avatar" style={{ background: hueFor(r.name), color: hueFor(r.name) === '#C8F03C' ? '#1F1410' : undefined }}>
               {initials(r.name)}
             </div>
             <div style={{ minWidth: 0 }}>
