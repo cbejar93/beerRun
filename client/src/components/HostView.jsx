@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { mergeRsvps } from '../data/mergeRsvps';
+import { EVENT_DATE } from '../data/constants';
 import Runners from './Runners';
 
 function formatElapsed(ms) {
@@ -467,7 +468,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
             <h2 className="sec-title">You're the captain.<br />Don't crash the boat.</h2>
           </div>
           <p className="sec-desc">
-            36 days out. Still time to panic. Everything you need to run
+            {Math.ceil((EVENT_DATE - new Date()) / (1000 * 60 * 60 * 24))} days out. Still time to panic. Everything you need to run
             the run, minus the actual running.
           </p>
         </div>

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+const ROMAN = { 2024: 'I', 2025: 'II', 2026: 'III', 2027: 'IV', 2028: 'V' };
+const edition = (y) => ROMAN[y] ?? y;
 
 function formatElapsed(ms) {
   const totalSecs = Math.floor(ms / 1000);
@@ -147,7 +149,7 @@ export default function Results() {
                   {formatElapsed(winnerMs)}
                 </div>
                 <div className="mono" style={{ fontSize: 11, opacity: 0.5, marginTop: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  Vol. III Champion · Lake Merritt Beer Run
+                  Vol. {edition(year)} Champion · Lake Merritt Beer Run
                 </div>
               </div>
 

@@ -289,6 +289,8 @@ app.post('/api/results', requireHost, async (req, res) => {
   if (!name?.trim()) return res.status(400).json({ error: 'name required' });
   try {
     const year = new Date().getFullYear();
+    const existing = await Result.findOne({ year, name: new RegExp(`^${name.trim()}$`, 'i') });
+    if (existing) return res.status(409).json({ error: 'already recorded' });
     const result = await Result.create({ name: name.trim(), finishedAt: new Date(), year });
     log.info(`Finish recorded: ${result.name} (${year})`);
     res.status(201).json(result);

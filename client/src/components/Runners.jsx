@@ -65,7 +65,7 @@ export default function Runners({ apiRsvps = [], onDelete }) {
             </div>
             <div style={{ minWidth: 0 }}>
               <div className="runner-name">{r.name}</div>
-              <div className="runner-meta">{r.pace ? `${r.pace} · ${r.note}` : r.note}</div>
+              <div className="runner-meta">{r.beer}</div>
               <span className="runner-status-pill">
                 {r.status === 'going' ? 'IN' : r.status === 'maybe' ? 'MAYBE' : 'OUT'}
               </span>

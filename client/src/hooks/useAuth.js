@@ -13,14 +13,18 @@ export function useAuth() {
     setHostToken(null);
   };
 
-  const authFetch = (url, options = {}) => {
-    return fetch(url, {
+  const authFetch = async (url, options = {}) => {
+    const res = await fetch(url, {
       ...options,
       headers: {
         ...options.headers,
         Authorization: `Bearer ${hostToken}`,
       },
     });
+    if (res.status === 401) {
+      logout();
+    }
+    return res;
   };
 
   return { hostToken, isHost: !!hostToken, login, logout, authFetch };
