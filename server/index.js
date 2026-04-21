@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import Rsvp from './models/Rsvp.js';
 import Task from './models/Task.js';
+import Result from './models/Result.js';
 
 const SEED_TASKS = [
   { t: 'Buy bibs (Amazon, 2-day ship)', due: 'Due Apr 22', done: false },
@@ -222,6 +223,41 @@ app.delete('/api/tasks/:id', requireHost, async (req, res) => {
     res.status(204).end();
   } catch (err) {
     log.error('DELETE /api/tasks/:id:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/results', async (_req, res) => {
+  try {
+    const results = await Result.find().sort({ finishedAt: 1 }).lean();
+    res.json(results);
+  } catch (err) {
+    log.error('GET /api/results:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/results', requireHost, async (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'name required' });
+  try {
+    const result = await Result.create({ name: name.trim(), finishedAt: new Date() });
+    log.info(`Finish recorded: ${result.name}`);
+    res.status(201).json(result);
+  } catch (err) {
+    log.error('POST /api/results:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/results/:id', requireHost, async (req, res) => {
+  try {
+    const deleted = await Result.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'not found' });
+    log.info(`Result removed: ${deleted.name}`);
+    res.status(204).end();
+  } catch (err) {
+    log.error('DELETE /api/results/:id:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

@@ -1,6 +1,162 @@
 import { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { mergeRsvps } from '../data/mergeRsvps';
 import Runners from './Runners';
+
+function FinishLine({ apiRsvps, authFetch }) {
+  const [name, setName] = useState('');
+  const [results, setResults] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  const combined = useMemo(() => mergeRsvps(apiRsvps), [apiRsvps]);
+  const goingNames = combined.filter(r => r.status === 'going').map(r => r.name);
+  const finishedNames = new Set(results.map(r => r.name.toLowerCase()));
+  const remaining = goingNames.filter(n => !finishedNames.has(n.toLowerCase()));
+
+  useEffect(() => {
+    fetch('/api/results')
+      .then(r => r.json())
+      .then(setResults)
+      .catch(() => {});
+  }, []);
+
+  const recordFinish = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const res = await authFetch('/api/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (res.ok) {
+        const entry = await res.json();
+        setResults(prev => [...prev, entry]);
+        setName('');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const undoFinish = async (id) => {
+    await authFetch(`/api/results/${id}`, { method: 'DELETE' });
+    setResults(prev => prev.filter(r => r._id !== id));
+  };
+
+  const leaderTime = results[0] ? new Date(results[0].finishedAt).getTime() : null;
+
+  const formatGap = (ms) => {
+    if (ms === 0) return 'LEADER';
+    const s = Math.floor(ms / 1000);
+    return `+${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+
+  const inputStyle = {
+    flex: 1, padding: '10px 12px', borderRadius: 8,
+    border: '1.5px solid var(--rule)', background: 'var(--paper)',
+    color: 'var(--ink)', fontFamily: 'Inter, sans-serif', fontSize: 14,
+    boxSizing: 'border-box', outline: 'none',
+  };
+
+  return (
+    <section className="section" style={{ borderTop: '2px solid var(--rule)' }}>
+      <div className="sec-head">
+        <div>
+          <div className="sec-num">H.02 / FINISH LINE</div>
+          <h2 className="sec-title">Tap as they cross.</h2>
+        </div>
+        <p className="sec-desc">
+          Hit the button the moment each runner finishes. Times are recorded automatically.{' '}
+          <Link to="/results" target="_blank" style={{ color: 'var(--punch)', textDecoration: 'none' }}>
+            Public results page →
+          </Link>
+        </p>
+      </div>
+
+      <div className="host-panel-grid host-panel-grid--half">
+        <div className="kpi" style={{ padding: 24 }}>
+          <div className="label" style={{ marginBottom: 12 }}>RECORD FINISH</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input
+              list="remaining-runners"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && recordFinish()}
+              placeholder="Runner name…"
+              style={inputStyle}
+            />
+            <datalist id="remaining-runners">
+              {remaining.map(n => <option key={n} value={n} />)}
+            </datalist>
+            <button
+              onClick={recordFinish}
+              disabled={!name.trim() || saving}
+              style={{
+                padding: '10px 20px', background: 'var(--punch)', color: 'var(--punch-ink)',
+                border: 'none', borderRadius: 10, fontFamily: "'Anton', sans-serif",
+                fontSize: 16, textTransform: 'uppercase', cursor: 'pointer',
+                letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                opacity: (!name.trim() || saving) ? 0.5 : 1,
+              }}
+            >
+              {saving ? '…' : 'Finish ✓'}
+            </button>
+          </div>
+          {remaining.length > 0 && (
+            <div className="mono" style={{ marginTop: 10, fontSize: 11, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {remaining.length} still out on course
+            </div>
+          )}
+        </div>
+
+        <div className="kpi" style={{ padding: 24 }}>
+          <div className="label" style={{ marginBottom: 12 }}>
+            FINISHERS · {results.length}
+          </div>
+          {results.length === 0 ? (
+            <div className="mono" style={{ fontSize: 12, opacity: 0.4, textTransform: 'uppercase' }}>
+              No finishers recorded yet
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {results.map((r, i) => {
+                const gap = leaderTime ? new Date(r.finishedAt).getTime() - leaderTime : 0;
+                return (
+                  <div key={r._id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    fontSize: 14, padding: '8px 0',
+                    borderBottom: '1px solid color-mix(in oklab, var(--rule), transparent 85%)',
+                  }}>
+                    <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 16, width: 28, flexShrink: 0 }}>
+                      #{i + 1}
+                    </span>
+                    <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 15 }}>
+                      {r.name}
+                    </span>
+                    <span className="mono" style={{ fontSize: 11, opacity: 0.6 }}>
+                      {formatGap(gap)}
+                    </span>
+                    <button
+                      onClick={() => undoFinish(r._id)}
+                      title="Undo"
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--muted)', fontSize: 14, opacity: 0.4, padding: '0 2px',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                    >×</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function AddRunner({ onAdd, authFetch }) {
   const [name, setName] = useState('');
@@ -325,7 +481,7 @@ export default function HostView({ apiRsvps = [], onImport, authFetch = fetch })
         </div>{/* end grid */}
       </section>
       <Runners apiRsvps={apiRsvps} onDelete={deleteRunner} />
-
+      <FinishLine apiRsvps={apiRsvps} authFetch={authFetch} />
     </>
   );
 }
