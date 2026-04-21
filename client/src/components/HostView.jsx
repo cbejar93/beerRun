@@ -132,7 +132,7 @@ function FinishLine({ apiRsvps, authFetch }) {
         </div>
         <p className="sec-desc">
           Start the timer when the gun goes off, then tap each runner's card as they finish.{' '}
-          <Link to="/results" target="_blank" style={{ color: 'var(--punch)', textDecoration: 'none' }}>
+          <Link to="/results" target="_blank" style={{ color: 'var(--amber)', textDecoration: 'none' }}>
             Public results page ↗
           </Link>
         </p>
