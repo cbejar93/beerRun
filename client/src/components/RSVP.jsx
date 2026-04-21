@@ -63,6 +63,7 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
             <h3 className="rsvp-prompt" style={{ fontSize: 36 }}>
               {isOut
                 ? `We'll miss you out there, ${name.split(' ')[0] || 'friend'}.`
+                : isMaybe ? `Maybe see you at Snow Park, ${name.split(' ')[0] || 'legend'}.`
                 : `See you at Snow Park, ${name.split(' ')[0] || 'legend'}.`}
             </h3>
             <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: 'var(--muted)' }}>
