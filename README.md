@@ -164,4 +164,4 @@ App runs on port 8080, region `sjc`, scales to zero when idle.
 
 ---
 
-Chug responsibly. DNF = Did Not Finish (your beer).
+
