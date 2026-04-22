@@ -45,26 +45,31 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
   };
 
   if (confirmed) {
+    const isOut = status === 'out';
+    const isMaybe = status === 'maybe';
     return (
       <section className="section" id="rsvp">
         <div className="sec-head">
           <div>
             <div className="sec-num">02 / RSVP</div>
-            <h2 className="sec-title">You're in.</h2>
+            <h2 className="sec-title">{isOut ? 'No worries.' : isMaybe ? "We'll hold a spot." : "You're in."}</h2>
           </div>
         </div>
         <div className="rsvp">
           <div className="rsvp-card" style={{ alignItems: 'flex-start' }}>
             <div className="bottle-seal" style={{ transform: 'rotate(-4deg)', width: 120, height: 120, fontSize: 15 }}>
-              Bib<br />#{bibNum}<br />Confirmed
+              {isOut ? <>Next<br />year,<br />champ</> : <>Bib<br />#{bibNum}<br />Confirmed</>}
             </div>
             <h3 className="rsvp-prompt" style={{ fontSize: 36 }}>
-              See you at Snow Park, {name.split(' ')[0] || 'legend'}.
+              {isOut
+                ? `We'll miss you out there, ${name.split(' ')[0] || 'friend'}.`
+                : isMaybe ? `Maybe see you at Snow Park, ${name.split(' ')[0] || 'legend'}.`
+                : `See you at Snow Park, ${name.split(' ')[0] || 'legend'}.`}
             </h3>
             <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: 'var(--muted)' }}>
               We logged you as <strong style={{ color: 'var(--ink)' }}>{status.toUpperCase()}</strong>
-              {beer ? <> · bringing <strong style={{ color: 'var(--ink)' }}>{beer}</strong></> : null}.
-              Check email for your bib number and the group chat invite.
+              {!isOut && beer ? <> · bringing <strong style={{ color: 'var(--ink)' }}>{beer}</strong></> : null}.
+              {!isOut && ' Check email for your bib number and the group chat invite.'}
             </p>
           </div>
           <div className="rsvp-side">
@@ -110,12 +115,14 @@ export default function RSVP({ onRsvp, rsvpStatus, apiRsvps = [] }) {
             placeholder="Your name (the one on your ID)"
             value={name}
             onChange={e => setName(e.target.value)}
+            maxLength={50}
           />
           <input
             className="rsvp-input"
             placeholder="What are you bringing? (e.g. 6-pack of IPA, kombucha if you're out)"
             value={beer}
             onChange={e => setBeer(e.target.value)}
+            maxLength={80}
           />
           {error && (
             <p style={{ margin: 0, fontSize: 13, color: 'var(--punch)', fontFamily: "'JetBrains Mono', monospace" }}>

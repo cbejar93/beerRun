@@ -88,9 +88,21 @@ function FinishLine({ apiRsvps, authFetch }) {
     const snapshot = Date.now() - raceStart.getTime() - pauseOffsetRef.current;
     setElapsed(snapshot);
     setIsPaused(true); // freeze timer immediately
-    const res = await authFetch('/api/results/end', { method: 'POST' });
-    const data = await res.json();
+
+    const [endRes, ...dnfResults] = await Promise.all([
+      authFetch('/api/results/end', { method: 'POST' }),
+      ...remaining.map(name =>
+        authFetch('/api/results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, dnf: true }),
+        }).then(r => r.ok ? r.json() : null)
+      ),
+    ]);
+
+    const data = await endRes.json();
     setRaceEnd(new Date(data.endedAt));
+    setResults(prev => [...prev, ...dnfResults.filter(Boolean)]);
   };
 
   const resetRace = async () => {
@@ -250,35 +262,69 @@ function FinishLine({ apiRsvps, authFetch }) {
             </>
           )}
 
-          {results.length > 0 && (
-            <>
-              <div className="label" style={{ marginBottom: 12 }}>FINISHERS</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
-                {results.map((r, i) => {
-                  const ms = raceStart ? new Date(r.finishedAt).getTime() - raceStart.getTime() : 0;
-                  return (
-                    <div key={r._id} style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '10px 14px', borderRadius: 10,
-                      background: i === 0 ? 'color-mix(in oklab, var(--amber), transparent 85%)' : 'var(--card)',
-                      border: `1.5px solid ${i === 0 ? 'var(--amber)' : 'var(--rule)'}`,
-                    }}>
-                      <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, width: 32, flexShrink: 0 }}>#{i + 1}</span>
-                      <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 16 }}>{r.name}</span>
-                      <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{formatElapsed(ms)}</span>
-                      <button
-                        onClick={() => undoFinish(r._id)}
-                        title="Undo"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
-                      >×</button>
+          {results.length > 0 && (() => {
+            const finishers = results.filter(r => !r.dnf);
+            const dnfs = results.filter(r => r.dnf);
+            return (
+              <>
+                {finishers.length > 0 && (
+                  <>
+                    <div className="label" style={{ marginBottom: 12 }}>FINISHERS</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+                      {finishers.map((r, i) => {
+                        const ms = raceStart ? new Date(r.finishedAt).getTime() - raceStart.getTime() : 0;
+                        return (
+                          <div key={r._id} style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '10px 14px', borderRadius: 10,
+                            background: i === 0 ? 'color-mix(in oklab, var(--amber), transparent 85%)' : 'var(--card)',
+                            border: `1.5px solid ${i === 0 ? 'var(--amber)' : 'var(--rule)'}`,
+                          }}>
+                            <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, width: 32, flexShrink: 0 }}>#{i + 1}</span>
+                            <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 16 }}>{r.name}</span>
+                            <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{formatElapsed(ms)}</span>
+                            <button
+                              onClick={() => undoFinish(r._id)}
+                              title="Undo"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}
+                              onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                              onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                            >×</button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                  </>
+                )}
+                {dnfs.length > 0 && (
+                  <>
+                    <div className="label" style={{ marginBottom: 12 }}>DNF</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+                      {dnfs.map(r => (
+                        <div key={r._id} style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '10px 14px', borderRadius: 10,
+                          background: 'var(--card)', border: '1.5px solid var(--rule)',
+                          opacity: 0.5,
+                        }}>
+                          <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 18, width: 32, flexShrink: 0, color: 'var(--muted)' }}>—</span>
+                          <span style={{ flex: 1, fontFamily: "'Anton', sans-serif", textTransform: 'uppercase', fontSize: 16 }}>{r.name}</span>
+                          <span className="mono" style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>DNF</span>
+                          <button
+                            onClick={() => undoFinish(r._id)}
+                            title="Undo"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                          >×</button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
 
           <button
             onClick={resetRace}

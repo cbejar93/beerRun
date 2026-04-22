@@ -104,6 +104,8 @@ app.post('/api/rsvp', rsvpLimiter, async (req, res) => {
   if (!name || !status || !['going', 'maybe', 'out'].includes(status)) {
     return res.status(400).json({ error: 'name and valid status required' });
   }
+  if (name.length > 50) return res.status(400).json({ error: 'name too long (max 50)' });
+  if (beer && beer.length > 80) return res.status(400).json({ error: 'bringing field too long (max 80)' });
   try {
     const entry = await Rsvp.create({ name, beer: beer || '', status });
     log.info(`RSVP: ${entry.name} → ${entry.status}${entry.beer ? ` (${entry.beer})` : ''}`);
@@ -285,14 +287,14 @@ app.delete('/api/results/start', requireHost, async (req, res) => {
 });
 
 app.post('/api/results', requireHost, async (req, res) => {
-  const { name } = req.body;
+  const { name, dnf } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name required' });
   try {
     const year = new Date().getFullYear();
     const existing = await Result.findOne({ year, name: new RegExp(`^${name.trim()}$`, 'i') });
     if (existing) return res.status(409).json({ error: 'already recorded' });
-    const result = await Result.create({ name: name.trim(), finishedAt: new Date(), year });
-    log.info(`Finish recorded: ${result.name} (${year})`);
+    const result = await Result.create({ name: name.trim(), finishedAt: new Date(), year, dnf: !!dnf });
+    log.info(`${dnf ? 'DNF' : 'Finish'} recorded: ${result.name} (${year})`);
     res.status(201).json(result);
   } catch (err) {
     log.error('POST /api/results:', err.message);
