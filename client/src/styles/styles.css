@@ -575,6 +575,12 @@ body { overflow-x: hidden; }
   aspect-ratio: 1.15;
 }
 .route-map svg { width: 100%; height: 100%; display: block; }
+.route-map--sat {
+  padding: 0;
+  overflow: hidden;
+  aspect-ratio: 0.97;
+  border-radius: 18px;
+}
 .route-stops {
   display: flex;
   flex-direction: column;

@@ -4,7 +4,7 @@ import Nav from '../components/Nav';
 import Hero from '../components/Hero';
 import Ticker from '../components/Ticker';
 import RSVP from '../components/RSVP';
-// import RouteMap from '../components/RouteMap';
+import RouteMap from '../components/RouteMap';
 import Runners from '../components/Runners';
 import TweaksPanel from '../components/TweaksPanel';
 import HostPinModal from '../components/HostPinModal';
@@ -65,7 +65,7 @@ export default function BeerRunApp() {
       <Hero />
       <Ticker />
       <RSVP onRsvp={handleRsvp} rsvpStatus={liveRsvp?.status} apiRsvps={apiRsvps} />
-      {/* <RouteMap /> */}
+      <RouteMap />
       <Runners apiRsvps={apiRsvps} />
       <footer className="foot">
         <span>© 2026 BEER RUN PLANNING COMMISSION · OAKLAND CA</span>
