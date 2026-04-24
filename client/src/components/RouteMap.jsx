@@ -1,39 +1,12 @@
 import { useState } from 'react';
 import { STOPS } from '../data/constants';
 
-// Marker positions in 866×896 satellite image coordinates, counter-clockwise from Snow Park
+// Marker positions in 866×896 satellite image coordinates
 const MARKERS = [
-  { x: 120, y: 265, label: 'SNOW PARK' },
-  { x: 618, y: 360, label: 'SAILBOAT HSE' },
-  { x: 480, y: 655, label: 'PERGOLA' },
-  { x: 295, y: 178, label: 'FAIRYLAND' },
+  { x: 489, y: 642, label: 'LAKESHORE' },
+  { x: 497, y: 269, label: 'BIRD SANCTUARY' },
+  { x: 105, y: 272, label: 'SNOW PARK' },
 ];
-
-// Counter-clockwise perimeter loop in 866×896 image coordinates
-const ROUTE_PATH = `
-  M 355 268
-  C 425 248, 498 236, 562 242
-  C 605 246, 628 270, 628 305
-  C 628 340, 608 378, 590 415
-  C 568 455, 550 495, 535 535
-  C 518 575, 502 615, 480 655
-  C 458 695, 432 733, 405 772
-  C 380 805, 352 832, 322 850
-  C 308 860, 290 862, 272 854
-  C 250 842, 228 814, 208 780
-  C 188 745, 175 708, 172 670
-  C 168 632, 168 593, 168 554
-  C 168 515, 168 476, 168 437
-  C 168 398, 168 359, 168 320
-  C 168 288, 166 260, 164 235
-  C 162 208, 160 178, 160 155
-  C 160 140, 172 130, 192 130
-  C 212 130, 228 140, 242 157
-  C 256 174, 262 198, 265 224
-  C 268 248, 278 264, 305 270
-  C 325 273, 342 270, 355 268
-  Z
-`;
 
 export default function RouteMap() {
   const [active, setActive] = useState(0);
@@ -71,11 +44,6 @@ export default function RouteMap() {
           {/* SVG overlay */}
           <svg viewBox="0 0 866 896" preserveAspectRatio="xMidYMid meet"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-            {/* Route path */}
-            <path d={ROUTE_PATH} fill="none" stroke="var(--stout)" strokeWidth="6"
-              strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
-            <path d={ROUTE_PATH} fill="none" stroke="var(--punch)" strokeWidth="2.5"
-              strokeDasharray="4 10" strokeLinecap="round" />
             {/* Compass */}
             <g transform="translate(822, 852)">
               <circle r="22" fill="var(--paper)" stroke="var(--rule)" strokeWidth="1.5" opacity="0.92" />
@@ -86,7 +54,7 @@ export default function RouteMap() {
             {MARKERS.map((m, i) => {
               const isActive = active === i;
               const isFinish = i === MARKERS.length - 1;
-              const labelY = m.y < 400 ? m.y + 42 : m.y - 38;
+              const labelY = m.y < 350 ? m.y + 42 : m.y - 38;
               return (
                 <g key={i} style={{ cursor: 'pointer' }}
                   onMouseEnter={() => setActive(i)}
