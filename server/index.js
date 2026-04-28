@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
@@ -9,10 +10,20 @@ import morgan from 'morgan';
 import { rateLimit } from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import path from 'path';
+
 import Rsvp from './models/Rsvp.js';
 import Task from './models/Task.js';
 import Result from './models/Result.js';
 import RaceState from './models/RaceState.js';
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  console.error('FATAL: JWT_SECRET must be set and at least 32 characters');
+  process.exit(1);
+}
+if (!process.env.HOST_PIN) {
+  console.error('FATAL: HOST_PIN must be set');
+  process.exit(1);
+}
 
 const SEED_TASKS = [
   { t: 'Buy bibs (Amazon, 2-day ship)', due: 'Due Apr 22', done: false },
@@ -49,8 +60,9 @@ function normalizeStatus(raw = '') {
   return 'maybe'; // "maybe", "awaiting", "invited", blank → maybe
 }
 
-app.use(cors());
-app.use(express.json());
+app.use(helmet());
+app.use(cors({ origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : false }));
+app.use(express.json({ limit: '100kb' }));
 app.use(morgan('[:date[iso]] :method :url :status :res[content-length]b - :response-time ms'));
 
 const __filename = fileURLToPath(import.meta.url);
@@ -112,7 +124,7 @@ app.post('/api/rsvp', rsvpLimiter, async (req, res) => {
     res.status(201).json(entry);
   } catch (err) {
     log.error('POST /api/rsvp:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -128,7 +140,7 @@ app.get('/api/rsvp', async (_req, res) => {
     });
   } catch (err) {
     log.error('GET /api/rsvp:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -164,7 +176,7 @@ app.post('/api/rsvp/import', requireHost, upload.single('file'), async (req, res
     res.json({ imported: toInsert.length, skipped: rows.length - toInsert.length, total: rows.length });
   } catch (err) {
     log.error('POST /api/rsvp/import:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -176,7 +188,7 @@ app.delete('/api/rsvp/:id', requireHost, async (req, res) => {
     res.status(204).end();
   } catch (err) {
     log.error('DELETE /api/rsvp/:id:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -186,7 +198,7 @@ app.get('/api/tasks', async (_req, res) => {
     res.json(tasks);
   } catch (err) {
     log.error('GET /api/tasks:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -199,11 +211,14 @@ app.post('/api/tasks', requireHost, async (req, res) => {
     res.status(201).json(task);
   } catch (err) {
     log.error('POST /api/tasks:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
 app.patch('/api/tasks/:id', requireHost, async (req, res) => {
+  if (typeof req.body.done !== 'boolean') {
+    return res.status(400).json({ error: 'done must be a boolean' });
+  }
   try {
     const task = await Task.findByIdAndUpdate(
       req.params.id,
@@ -214,7 +229,7 @@ app.patch('/api/tasks/:id', requireHost, async (req, res) => {
     res.json(task);
   } catch (err) {
     log.error('PATCH /api/tasks/:id:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -226,14 +241,14 @@ app.delete('/api/tasks/:id', requireHost, async (req, res) => {
     res.status(204).end();
   } catch (err) {
     log.error('DELETE /api/tasks/:id:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
 app.get('/api/results', async (req, res) => {
   try {
     const currentYear = new Date().getFullYear();
-    const year = req.query.year ? parseInt(req.query.year) : currentYear;
+    const year = req.query.year ? Math.max(1900, Math.min(2100, parseInt(req.query.year) || currentYear)) : currentYear;
     const [state, results, years] = await Promise.all([
       RaceState.findOne({ year }).lean(),
       Result.find({ year }).sort({ finishedAt: 1 }).lean(),
@@ -242,7 +257,7 @@ app.get('/api/results', async (req, res) => {
     res.json({ year, startedAt: state?.startedAt ?? null, endedAt: state?.endedAt ?? null, results, years: years.sort((a, b) => b - a) });
   } catch (err) {
     log.error('GET /api/results:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -256,7 +271,7 @@ app.post('/api/results/start', requireHost, async (req, res) => {
     res.json({ year, startedAt });
   } catch (err) {
     log.error('POST /api/results/start:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -269,7 +284,7 @@ app.post('/api/results/end', requireHost, async (req, res) => {
     res.json({ endedAt });
   } catch (err) {
     log.error('POST /api/results/end:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -282,7 +297,7 @@ app.delete('/api/results/start', requireHost, async (req, res) => {
     res.status(204).end();
   } catch (err) {
     log.error('DELETE /api/results/start:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -291,14 +306,14 @@ app.post('/api/results', requireHost, async (req, res) => {
   if (!name?.trim()) return res.status(400).json({ error: 'name required' });
   try {
     const year = new Date().getFullYear();
-    const existing = await Result.findOne({ year, name: new RegExp(`^${name.trim()}$`, 'i') });
+    const existing = await Result.findOne({ year, name: { $regex: `^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
     if (existing) return res.status(409).json({ error: 'already recorded' });
     const result = await Result.create({ name: name.trim(), finishedAt: new Date(), year, dnf: !!dnf });
     log.info(`${dnf ? 'DNF' : 'Finish'} recorded: ${result.name} (${year})`);
     res.status(201).json(result);
   } catch (err) {
     log.error('POST /api/results:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
@@ -310,7 +325,7 @@ app.delete('/api/results/:id', requireHost, async (req, res) => {
     res.status(204).end();
   } catch (err) {
     log.error('DELETE /api/results/:id:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'internal server error' });
   }
 });
 
